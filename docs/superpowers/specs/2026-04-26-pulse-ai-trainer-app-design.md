@@ -738,3 +738,22 @@ A suggested sequence; the implementation plan (next document) will refine this w
 - **SwiftData:** https://developer.apple.com/documentation/swiftdata
 - **Cloudflare Workers:** https://developers.cloudflare.com/workers/
 - **Cloudflare R2:** https://developers.cloudflare.com/r2/
+
+---
+
+## Appendix A — Operational URLs (filled in after Plan 1)
+
+These values were provisioned during execution of Plan 1 (Foundation). The iOS app (Plan 2) will hardcode these.
+
+- **Worker proxy URL:** `https://pulse-proxy.smwein.workers.dev/`
+- **R2 public bucket URL:** `https://pub-5b5246fd91ca43198f55ea2e02173da2.r2.dev`
+- **Manifest URL:** `https://pub-5b5246fd91ca43198f55ea2e02173da2.r2.dev/exercises/manifest.json`
+- **Exercise asset URLs:** `https://pub-5b5246fd91ca43198f55ea2e02173da2.r2.dev/exercises/<id>.mp4` and `https://pub-5b5246fd91ca43198f55ea2e02173da2.r2.dev/exercises/<id>-poster.jpg`
+- **Cloudflare account ID:** `0d6eb5842d372efe2fe15a6b6d59f881`
+- **Device token:** stored in `worker/.dev.vars` (gitignored) and as a Worker secret. The same value must be baked into the iOS build's secrets at Plan 2.
+
+### Pivots from the original spec
+
+- **Content source:** ExerciseDB (AGPL-3.0) → Free Exercise DB (Unlicense). The iOS catalog is constrained to 873 exercises matching what's in the manifest, all public-domain.
+- **Backend upload mechanism:** `@aws-sdk/client-s3` with R2 S3 credentials → `wrangler r2 object put` shell-outs from the import script. Production iOS app does NOT need any R2 credentials — it reads from the public bucket URL directly.
+

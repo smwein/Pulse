@@ -59,5 +59,9 @@ node_modules/
 *.swp
 *.swo
 
+# Claude Code session-local state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
 # Logs
 *.log
