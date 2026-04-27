@@ -4,7 +4,7 @@ export interface Env {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     return new Response("pulse-proxy stub", { status: 200 });
   },
 } satisfies ExportedHandler<Env>;

@@ -1,7 +1,6 @@
 name = "pulse-proxy"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
-account_id = "0d6eb5842d372efe2fe15a6b6d59f881"
 
 # Secrets are set via `wrangler secret put` (not in this file):
 #   ANTHROPIC_API_KEY
