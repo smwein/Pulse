@@ -11,4 +11,10 @@ describe("HTTP method", () => {
     const response = await SELF.fetch("https://example.com/", { method: "PUT" });
     expect(response.status).toBe(405);
   });
+
+  it("405 response has cache-control: no-store", async () => {
+    const response = await SELF.fetch("https://example.com/", { method: "GET" });
+    expect(response.status).toBe(405);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
 });

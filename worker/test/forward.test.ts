@@ -79,4 +79,66 @@ describe("forwarding to Anthropic", () => {
 
     expect(response.status).toBe(502);
   });
+
+  it("rejects null body with 400", async () => {
+    const response = await SELF.fetch("https://example.com/", {
+      method: "POST",
+      headers: { "X-Device-Token": "test-device-token" },
+      body: "null",
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects array body with 400", async () => {
+    const response = await SELF.fetch("https://example.com/", {
+      method: "POST",
+      headers: { "X-Device-Token": "test-device-token" },
+      body: "[]",
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects primitive body (number) with 400", async () => {
+    const response = await SELF.fetch("https://example.com/", {
+      method: "POST",
+      headers: { "X-Device-Token": "test-device-token" },
+      body: "42",
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("502 response has cache-control: no-store", async () => {
+    fetchMock.get("https://api.anthropic.com").intercept({ path: "/v1/messages", method: "POST" }).reply(500, "upstream error");
+    const response = await SELF.fetch("https://example.com/", {
+      method: "POST",
+      headers: { "X-Device-Token": "test-device-token" },
+      body: JSON.stringify({ model: "x", messages: [] }),
+    });
+    expect(response.status).toBe(502);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("preserves upstream content-type and retry-after when upstream returns 429", async () => {
+    fetchMock.get("https://api.anthropic.com").intercept({
+      path: "/v1/messages",
+      method: "POST",
+    }).reply(429, '{"error":"rate_limited"}', {
+      headers: {
+        "content-type": "application/json",
+        "retry-after": "30",
+      },
+    });
+
+    const response = await SELF.fetch("https://example.com/", {
+      method: "POST",
+      headers: { "X-Device-Token": "test-device-token" },
+      body: JSON.stringify({ model: "x", messages: [] }),
+    });
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("content-type")).toBe("application/json");
+    expect(response.headers.get("retry-after")).toBe("30");
+    const text = await response.text();
+    expect(text).toBe('{"error":"rate_limited"}');
+  });
 });

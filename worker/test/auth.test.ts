@@ -18,4 +18,13 @@ describe("device token auth", () => {
     });
     expect(response.status).toBe(403);
   });
+
+  it("403 response has cache-control: no-store", async () => {
+    const response = await SELF.fetch("https://example.com/", {
+      method: "POST",
+      body: JSON.stringify({ model: "x", messages: [] }),
+    });
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
 });
