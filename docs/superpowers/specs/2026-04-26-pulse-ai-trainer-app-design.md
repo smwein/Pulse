@@ -34,7 +34,7 @@ These are the answers chosen during the brainstorming session. They are inputs t
 | **Backend** | One Cloudflare Worker (~80 lines TS) acting as a stateless Anthropic API proxy. No database. |
 | **LLM provider** | Anthropic — Claude Sonnet 4.6 for chat, Claude Opus 4.7 for plan generation and adaptation |
 | **Streaming** | Server-Sent Events (SSE) end-to-end, with `⟦CHECKPOINT⟧` markers in model output rendered live as mono console lines |
-| **Exercise content** | ExerciseDB (open source, ~1,300+ animated GIF demos) re-encoded to MP4, hosted in Cloudflare R2, manifest-driven |
+| **Exercise content** | Free Exercise DB ([yuhonas/free-exercise-db](https://github.com/yuhonas/free-exercise-db), Unlicense / public domain, 800+ exercises with photo demos) re-encoded as 2-frame looping MP4s, hosted in Cloudflare R2, manifest-driven. Public-domain license keeps future commercial / multi-user options open. |
 | **HealthKit scope** | Full: read activity/HRV/sleep summaries, write completed workouts. Watch streams live HR ~1 Hz during sessions. |
 | **Auth** | None in v1. Device-bound. (Architecture leaves room for Sign-in-with-Apple later.) |
 | **Distribution** | TestFlight internal track, no App Store review. Apple Developer Program ($99/yr). |
@@ -422,45 +422,41 @@ Every plan/adaptation response is decoded into a Codable schema (`WorkoutPlan`, 
 
 ## 8. Content Pipeline (Exercise Demos)
 
-### Source: ExerciseDB
+### Source: Free Exercise DB
 
-[ExerciseDB](https://github.com/exercisedb/exercisedb-api) — open-source exercise library, ~1,300+ exercises. Each entry has:
-- Name, target body part, equipment, level, kind
-- Animated GIF demonstration (3D rendered figure performing the move)
-- Step-by-step instructions
+[Free Exercise DB](https://github.com/yuhonas/free-exercise-db) — public-domain (Unlicense) exercise library, 800+ exercises. Each entry has:
+- Name, primary/secondary muscles, equipment, level, force, mechanic, category
+- Two photo demonstrations (start position + end position) as JPEGs in the repo
+- Step-by-step instructions array
 
-Open-source MIT-style license; embedding/redistribution allowed.
+License is Unlicense (public domain) — no attribution required, commercial use allowed, closed-source distribution allowed. This keeps the door open to commercializing or opening up to multi-user later without licensing headaches.
 
 ### One-time import script (run locally on Mac)
 
-Not part of the iOS app or Worker — a standalone script (`tools/import_exercises.ts`) you run once to populate R2.
+Not part of the iOS app or Worker — a standalone Node/TypeScript script (`tools/import-exercises/`) you run once to populate R2.
 
 ```
-1. Clone ExerciseDB repo locally
+1. Fetch free-exercise-db dist/exercises.json (the curated combined file)
 2. For each exercise:
-   a. Re-encode GIF → MP4 (H.264, 720×720 square, ~600 kbps, 30 fps,
-      muted, ffmpeg)
-   b. Extract poster JPEG (frame 0)
-   c. Upload MP4 → r2://pulse/exercises/{id}.mp4
-   d. Upload poster → r2://pulse/exercises/{id}-poster.jpg
-3. Build manifest JSON:
-   {
-     "version": <timestamp>,
-     "exercises": [
-       { "id", "name", "focus", "level", "kind", "equipment",
-         "videoURL", "posterURL", "instructions" }
-     ]
-   }
+   a. Download images (typically 2 photos per exercise: start + end position)
+      from raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/{id}/
+   b. Use ffmpeg to combine the 2 frames into a 2-second looping MP4
+      (1.5s per frame, slight crossfade, H.264, 720×720, muted)
+   c. Save the first image as a poster JPEG
+   d. Upload MP4 → r2://pulse/exercises/{id}.mp4
+   e. Upload poster → r2://pulse/exercises/{id}-poster.jpg
+3. Build manifest JSON keyed by exercise id, with all metadata + URLs
 4. Upload manifest → r2://pulse/exercises/manifest.json
 ```
 
-Total time: ~3–4 hours for ~1,300 exercises. Storage: ~5–8 GB in R2 (~$0.05/mo).
+Total time: ~30–60 minutes for 800 exercises (script-driven, runs unattended). Storage: ~1–2 GB in R2 (~$0.02/mo).
 
-### Why MP4 over GIF
+### Why MP4 over the original JPEGs
 
-- AVPlayer renders MP4 natively at 60 fps; GIFs require additional libraries and burn CPU on iOS
-- ~10× smaller files (better cache, less bandwidth)
+- AVPlayer renders MP4 natively at 60 fps; matches the design language of "demonstrations in motion"
+- 2-frame oscillation between start/end position is visually informative — better than a static image, simpler than animated 3D models
 - Easier to loop seamlessly via `AVPlayerLooper`
+- Same playback code path as if we later upgrade specific exercises to AI-generated cinematic clips
 
 ### iOS playback
 
@@ -699,7 +695,7 @@ Explicitly deferred so we can focus the first implementation:
 - **Sign-in-with-Apple**
 - **Multi-device sync via CloudKit**
 - **Social / sharing features** (the post-workout share-card from Future.co)
-- **AI-generated cinematic exercise videos** (deferred polish; ExerciseDB GIFs in v1)
+- **AI-generated cinematic exercise videos** (deferred polish; Free Exercise DB photo-loops in v1)
 - **On-device LLM for whispers** (pre-generated server-side in v1)
 - **Plan generation for full week** in v1 — initially generate today's workout only, expand to weekly plan once today-only is stable
 
@@ -734,7 +730,7 @@ A suggested sequence; the implementation plan (next document) will refine this w
 ## 13. References
 
 - **Design handoff:** `design_handoff_pulse_workout_app/README.md` and the JSX/HTML files alongside it. This is the source of truth for: visual design, screen layout, copy, interaction behaviors, coach personalities, design tokens, and the `WorkoutFeedback` schema.
-- **ExerciseDB:** https://github.com/exercisedb/exercisedb-api
+- **Free Exercise DB:** https://github.com/yuhonas/free-exercise-db
 - **Anthropic Messages API + streaming:** https://docs.anthropic.com/en/api/messages-streaming
 - **Anthropic prompt caching:** https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
 - **HealthKit `HKWorkoutSession`:** https://developer.apple.com/documentation/healthkit/hkworkoutsession
