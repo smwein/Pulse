@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Pulse — AI Workout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css"/>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <style>
+    body { background: #0a0a0a; min-height: 100vh; display: grid; place-items: center; }
+    #root { width: 100%; height: 100vh; display: grid; place-items: center; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="icons.jsx"></script>
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="components.jsx"></script>
+  <script type="text/babel" src="screens/home.jsx"></script>
+  <script type="text/babel" src="screens/onboarding.jsx"></script>
+  <script type="text/babel" src="screens/plangen.jsx"></script>
+  <script type="text/babel" src="screens/workoutdetail.jsx"></script>
+  <script type="text/babel" src="screens/inworkout.jsx"></script>
+  <script type="text/babel" src="screens/misc.jsx"></script>
+  <script type="text/babel" src="screens/complete.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+    const { TabBar } = window.PulseUI;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "coach": "ace",
+      "accentHue": 25,
+      "intensity": 7,
+      "showOnboarding": true
+    }/*EDITMODE-END*/;
+
+    function App() {
+      const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const [tab, setTab] = useState("home");
+      const [route, setRoute] = useState(tweaks.showOnboarding ? "onboarding" : "tabs");
+      const [chatOpen, setChatOpen] = useState(false);
+
+      const coach = window.PulseData.COACHES[tweaks.coach] || window.PulseData.COACHES.ace;
+
+      // Apply accent hue to root
+      useEffect(() => {
+        document.documentElement.style.setProperty("--accent-h", coach.accent);
+      }, [coach.accent]);
+
+      const goToWorkout = () => setRoute("workoutDetail");
+
+      let body;
+      if (route === "onboarding") {
+        body = <OnboardingScreen onDone={(prefs) => {
+          if (prefs && prefs.coach) setTweak("coach", prefs.coach);
+          setRoute("tabs");
+        }}/>;
+      } else if (route === "plan") {
+        body = <PlanGenScreen coach={coach} intensity={tweaks.intensity}
+          onBack={() => setRoute("tabs")}
+          onDone={() => setRoute("workoutDetail")}/>;
+      } else if (route === "workoutDetail") {
+        body = <WorkoutDetailScreen coach={coach}
+          onBack={() => setRoute("tabs")}
+          onStart={() => setRoute("inWorkout")}/>;
+      } else if (route === "inWorkout") {
+        body = <InWorkoutScreen coach={coach}
+          onExit={(reason) => setRoute(reason === "complete" ? "complete" : "tabs")}/>;
+      } else if (route === "complete") {
+        body = <CompleteScreen coach={coach} onDone={() => setRoute("tabs")}/>;
+      } else {
+        // tabs
+        let screen;
+        if (tab === "home") screen = <HomeScreen coach={coach}
+          onOpenWorkout={goToWorkout}
+          onOpenChat={() => setChatOpen(true)}
+          onOpenPlan={() => setRoute("plan")}
+          intensity={tweaks.intensity}/>;
+        else if (tab === "calendar") screen = <CalendarScreen coach={coach} onOpenWorkout={goToWorkout}/>;
+        else if (tab === "library") screen = <LibraryScreen/>;
+        else if (tab === "stats") screen = <StatsScreen/>;
+        else if (tab === "profile") screen = <ProfileScreen coach={coach}
+          onChangeCoach={(id) => setTweak("coach", id)}
+          onTweaks={() => {}}/>;
+        body = (
+          <>
+            {screen}
+            <TabBar active={tab} onChange={setTab}/>
+          </>
+        );
+      }
+
+      return (
+        <IOSDevice dark={true}>
+          <div className="app">
+            {body}
+            {chatOpen && <ChatScreen coach={coach} onClose={() => setChatOpen(false)}/>}
+          </div>
+          <PulseTweaks tweaks={tweaks} setTweak={setTweak}/>
+        </IOSDevice>
+      );
+    }
+
+    function PulseTweaks({ tweaks, setTweak }) {
+      return (
+        <TweaksPanel title="Pulse · Tweaks">
+          <TweakSection title="Coach">
+            <TweakSelect
+              label="Personality"
+              value={tweaks.coach}
+              onChange={(v) => {
+                setTweak("coach", v);
+                const c = window.PulseData.COACHES[v];
+                if (c) setTweak("accentHue", c.accent);
+              }}
+              options={Object.values(window.PulseData.COACHES).map(c => ({ value: c.id, label: `${c.name} · ${c.role}` }))}
+            />
+          </TweakSection>
+          <TweakSection title="Session">
+            <TweakSlider label="Intensity" value={tweaks.intensity} min={1} max={10} step={1}
+              onChange={(v) => setTweak("intensity", v)}/>
+          </TweakSection>
+          <TweakSection title="Flow">
+            <TweakButton onClick={() => {
+              setTweak("showOnboarding", true);
+              setTimeout(() => location.reload(), 100);
+            }}>Replay onboarding</TweakButton>
+          </TweakSection>
+        </TweaksPanel>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
