@@ -1,6 +1,7 @@
 name = "pulse-proxy"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
 
 # Secrets are set via `wrangler secret put` (not in this file):
 #   ANTHROPIC_API_KEY
