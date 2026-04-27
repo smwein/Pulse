@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { FreeExerciseDbEntry, PulseExerciseAsset, PulseManifest } from "./types.ts";
+import { FreeExerciseDbEntry, PulseExerciseAsset, PulseManifest } from "./types.js";
 
 const PUBLIC_URL = process.env.R2_PUBLIC_URL;
 if (!PUBLIC_URL) {

@@ -1,8 +1,8 @@
 import "dotenv/config";
-import { fetchExerciseDb } from "./fetchExercises.ts";
-import { downloadAllImages } from "./downloadImages.ts";
-import { encodeExerciseClip } from "./encodeMp4.ts";
-import { uploadFile } from "./uploadR2.ts";
+import { fetchExerciseDb } from "./fetchExercises.js";
+import { downloadAllImages } from "./downloadImages.js";
+import { encodeExerciseClip } from "./encodeMp4.js";
+import { uploadFile } from "./uploadR2.js";
 
 const all = await fetchExerciseDb();
 const sample = all.slice(0, 1);

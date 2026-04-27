@@ -1,4 +1,4 @@
-import { FreeExerciseDbEntry } from "./types.ts";
+import { FreeExerciseDbEntry } from "./types.js";
 
 const SOURCE_URL = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
 

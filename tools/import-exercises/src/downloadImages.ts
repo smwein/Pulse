@@ -1,7 +1,7 @@
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import pLimit from "p-limit";
-import { FreeExerciseDbEntry } from "./types.ts";
+import { FreeExerciseDbEntry } from "./types.js";
 
 const IMAGE_BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 const CACHE_DIR = "./cache/images";
