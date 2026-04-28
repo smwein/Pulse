@@ -3,6 +3,7 @@ import SwiftData
 @testable import Persistence
 
 final class SetLogEntityTests: XCTestCase {
+    @MainActor
     func test_setLogPersistsAttachedToSession() throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext

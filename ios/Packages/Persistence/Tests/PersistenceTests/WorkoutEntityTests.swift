@@ -3,6 +3,7 @@ import SwiftData
 @testable import Persistence
 
 final class WorkoutEntityTests: XCTestCase {
+    @MainActor
     func test_persistAndFetchWorkout() throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext

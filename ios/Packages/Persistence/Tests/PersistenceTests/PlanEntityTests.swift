@@ -3,6 +3,7 @@ import SwiftData
 @testable import Persistence
 
 final class PlanEntityTests: XCTestCase {
+    @MainActor
     func test_persistAndFetchPlanWithExternalStorage() throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext

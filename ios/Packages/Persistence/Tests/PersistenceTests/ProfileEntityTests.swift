@@ -3,6 +3,7 @@ import SwiftData
 @testable import Persistence
 
 final class ProfileEntityTests: XCTestCase {
+    @MainActor
     func test_persistAndFetchProfile() throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext
