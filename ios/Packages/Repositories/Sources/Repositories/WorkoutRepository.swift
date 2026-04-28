@@ -33,4 +33,24 @@ public final class WorkoutRepository {
         w.status = "completed"
         try ctx.save()
     }
+
+    /// Returns the most recently scheduled Workout, regardless of date.
+    public func latestWorkout() throws -> WorkoutEntity? {
+        var descriptor = FetchDescriptor<WorkoutEntity>(
+            sortBy: [SortDescriptor(\.scheduledFor, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContainer.mainContext.fetch(descriptor).first
+    }
+
+    public func deleteWorkout(id: UUID) throws {
+        let ctx = modelContainer.mainContext
+        let descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.id == id }
+        )
+        for w in try ctx.fetch(descriptor) {
+            ctx.delete(w)
+        }
+        try ctx.save()
+    }
 }
