@@ -65,3 +65,13 @@ node_modules/
 
 # Logs
 *.log
+
+# iOS — generated Xcode project + secrets
+ios/PulseApp.xcodeproj/
+ios/PulseApp.xcworkspace/
+ios/PulseApp/Secrets.swift
+ios/**/.DS_Store
+ios/**/xcuserdata/
+ios/**/.swiftpm/
+ios/**/.build/
+ios/DerivedData/
