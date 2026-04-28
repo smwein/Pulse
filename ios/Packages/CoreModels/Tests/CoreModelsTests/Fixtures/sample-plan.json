@@ -1,0 +1,45 @@
+{
+  "weekStart": "2026-04-27",
+  "workouts": [
+    {
+      "id": "W-2026-04-27",
+      "scheduledFor": "2026-04-27T09:00:00Z",
+      "title": "Lower Power",
+      "subtitle": "Heavy doubles, intent-driven",
+      "workoutType": "Strength",
+      "durationMin": 48,
+      "blocks": [
+        {
+          "id": "B-warm",
+          "label": "Warm-up",
+          "exercises": [
+            {
+              "id": "ex-001",
+              "exerciseID": "world_greatest_stretch",
+              "name": "World's Greatest Stretch",
+              "sets": [
+                { "setNum": 1, "reps": 6, "load": "BW", "restSec": 30 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "B-main",
+          "label": "Main",
+          "exercises": [
+            {
+              "id": "ex-002",
+              "exerciseID": "back_squat",
+              "name": "Back Squat",
+              "sets": [
+                { "setNum": 1, "reps": 5, "load": "60 kg", "restSec": 120 },
+                { "setNum": 2, "reps": 3, "load": "80 kg", "restSec": 180 },
+                { "setNum": 3, "reps": 2, "load": "92 kg", "restSec": 180 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
