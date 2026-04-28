@@ -5,5 +5,11 @@ let package = Package(
     name: "DesignSystem",
     platforms: [.iOS(.v17), .macOS(.v14)],
     products: [.library(name: "DesignSystem", targets: ["DesignSystem"])],
-    targets: [.target(name: "DesignSystem")]
+    dependencies: [
+        .package(path: "../CoreModels"),
+    ],
+    targets: [
+        .target(name: "DesignSystem", dependencies: ["CoreModels"]),
+        .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
+    ]
 )
