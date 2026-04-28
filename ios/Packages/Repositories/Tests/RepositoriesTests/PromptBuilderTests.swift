@@ -25,6 +25,7 @@ final class PromptBuilderTests: XCTestCase {
         XCTAssertTrue(m.contains("dumbbells"))
         XCTAssertTrue(m.contains("4"))
         XCTAssertTrue(m.contains("180"))
+        XCTAssertTrue(m.contains("2024-10-27"))
     }
 
     func test_strictRetrySuffix_appendsValidJSONReminder() {
