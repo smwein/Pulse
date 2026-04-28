@@ -5,5 +5,15 @@ let package = Package(
     name: "Networking",
     platforms: [.iOS(.v17), .macOS(.v14)],
     products: [.library(name: "Networking", targets: ["Networking"])],
-    targets: [.target(name: "Networking")]
+    dependencies: [
+        .package(path: "../CoreModels"),
+    ],
+    targets: [
+        .target(name: "Networking", dependencies: ["CoreModels"]),
+        .testTarget(
+            name: "NetworkingTests",
+            dependencies: ["Networking"],
+            resources: [.copy("Fixtures")]
+        ),
+    ]
 )
