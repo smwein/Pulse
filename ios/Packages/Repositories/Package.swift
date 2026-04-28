@@ -15,6 +15,10 @@ let package = Package(
             name: "Repositories",
             dependencies: ["CoreModels", "Persistence", "Networking"]
         ),
-        .testTarget(name: "RepositoriesTests", dependencies: ["Repositories"]),
+        .testTarget(
+            name: "RepositoriesTests",
+            dependencies: ["Repositories"],
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )

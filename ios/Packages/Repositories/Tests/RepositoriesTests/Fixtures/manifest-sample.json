@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "generatedAt": "2026-04-27T12:00:00Z",
+  "exercises": [
+    {
+      "id": "back_squat",
+      "name": "Back Squat",
+      "focus": "legs",
+      "level": "intermediate",
+      "kind": "strength",
+      "equipment": ["barbell"],
+      "videoURL": "https://pub-x.r2.dev/exercises/back_squat.mp4",
+      "posterURL": "https://pub-x.r2.dev/exercises/back_squat-poster.jpg",
+      "instructions": ["Stand tall", "Descend"]
+    },
+    {
+      "id": "world_greatest_stretch",
+      "name": "World's Greatest Stretch",
+      "focus": "mobility",
+      "level": "all",
+      "kind": "mobility",
+      "equipment": [],
+      "videoURL": "https://pub-x.r2.dev/exercises/world_greatest_stretch.mp4",
+      "posterURL": "https://pub-x.r2.dev/exercises/world_greatest_stretch-poster.jpg",
+      "instructions": ["Lunge forward"]
+    }
+  ]
+}
