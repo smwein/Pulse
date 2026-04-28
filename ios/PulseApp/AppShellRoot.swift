@@ -11,8 +11,10 @@ struct AppShellRoot: View {
     let themeStore: ThemeStore
 
     var body: some View {
-        RootScaffold(appContainer: appContainer, themeStore: themeStore) {
-            DebugStreamView(api: appContainer.api, themeStore: themeStore)
+        FirstRunGate(appContainer: appContainer, themeStore: themeStore) {
+            RootScaffold(appContainer: appContainer, themeStore: themeStore) {
+                DebugStreamView(api: appContainer.api, themeStore: themeStore)
+            }
         }
     }
 }
