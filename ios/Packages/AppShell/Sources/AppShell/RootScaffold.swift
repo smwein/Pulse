@@ -1,9 +1,15 @@
 import SwiftUI
 import DesignSystem
 import Repositories
+import Home
+import WorkoutDetail
+import PlanGeneration
+import CoreModels
 
 public struct RootScaffold<DebugContent: View>: View {
     @State private var selectedTab: PulseTab = .today
+    @State private var selectedWorkoutID: UUID?
+    @State private var regeneratePresentedFor: Profile?
     private let appContainer: AppContainer
     private let themeStore: ThemeStore
     private let debugContent: () -> DebugContent
@@ -26,7 +32,7 @@ public struct RootScaffold<DebugContent: View>: View {
                 }
                 Group {
                     switch selectedTab {
-                    case .today: todayPlaceholder
+                    case .today: todayTab
                     case .progress: progressPlaceholder
                     case .debug: debugContent()
                     }
@@ -48,24 +54,50 @@ public struct RootScaffold<DebugContent: View>: View {
         }
     }
 
-    private var todayPlaceholder: some View {
-        ScrollView {
-            VStack(spacing: PulseSpacing.lg) {
-                PulseCard {
-                    VStack(alignment: .leading, spacing: PulseSpacing.sm) {
-                        Text("Today")
-                            .pulseFont(.h2)
-                            .foregroundStyle(PulseColors.ink0.color)
-                        Text("Plan 2 foundation shell. Real feature ships in Plan 3.")
-                            .pulseFont(.body)
-                            .foregroundStyle(PulseColors.ink2.color)
-                    }
-                }
-                ExercisePlaceholder(label: "PREVIEW")
-                    .frame(height: 220)
+    @ViewBuilder
+    private var todayTab: some View {
+        #if os(iOS)
+        NavigationStack {
+            HomeView(
+                workoutRepo: WorkoutRepository(modelContainer: appContainer.modelContainer),
+                profileRepo: ProfileRepository(modelContainer: appContainer.modelContainer),
+                onViewWorkout: { id in selectedWorkoutID = id },
+                onRegenerate: { triggerRegenerate() }
+            )
+            .navigationDestination(item: $selectedWorkoutID) { id in
+                WorkoutDetailView(
+                    workoutID: id,
+                    modelContainer: appContainer.modelContainer,
+                    assetRepo: ExerciseAssetRepository(
+                        modelContainer: appContainer.modelContainer,
+                        manifestURL: URL(string: "https://placeholder.invalid/manifest.json")!
+                    )
+                )
             }
-            .padding(PulseSpacing.lg)
         }
+        .fullScreenCover(item: $regeneratePresentedFor) { profile in
+            regenerateScreen(profile: profile)
+        }
+        #else
+        NavigationStack {
+            HomeView(
+                workoutRepo: WorkoutRepository(modelContainer: appContainer.modelContainer),
+                profileRepo: ProfileRepository(modelContainer: appContainer.modelContainer),
+                onViewWorkout: { id in selectedWorkoutID = id },
+                onRegenerate: { triggerRegenerate() }
+            )
+            .navigationDestination(item: $selectedWorkoutID) { id in
+                WorkoutDetailView(
+                    workoutID: id,
+                    modelContainer: appContainer.modelContainer,
+                    assetRepo: ExerciseAssetRepository(
+                        modelContainer: appContainer.modelContainer,
+                        manifestURL: URL(string: "https://placeholder.invalid/manifest.json")!
+                    )
+                )
+            }
+        }
+        #endif
     }
 
     private var progressPlaceholder: some View {
@@ -77,4 +109,41 @@ public struct RootScaffold<DebugContent: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    private func triggerRegenerate() {
+        let repo = ProfileRepository(modelContainer: appContainer.modelContainer)
+        if let p = repo.currentProfile() {
+            regeneratePresentedFor = p
+        }
+    }
+
+    @ViewBuilder
+    private func regenerateScreen(profile: Profile) -> some View {
+        if let coach = Coach.byID(profile.activeCoachID) {
+            let planRepo = PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api)
+            PlanGenerationView(
+                profile: profile,
+                coach: coach,
+                mode: .regenerate,
+                streamProvider: { p in planRepo.regenerate(profile: p, coach: coach) },
+                onPersistedWorkout: { _ in
+                    let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
+                    if let w = try? repo.latestWorkout() {
+                        return PersistedRegenHandle(id: w.id, title: w.title)
+                    }
+                    return nil
+                },
+                onViewWorkout: { id in
+                    regeneratePresentedFor = nil
+                    selectedWorkoutID = id
+                },
+                onBackToHome: { regeneratePresentedFor = nil }
+            )
+        }
+    }
+}
+
+private struct PersistedRegenHandle: WorkoutHandle {
+    let id: UUID
+    let title: String
 }
