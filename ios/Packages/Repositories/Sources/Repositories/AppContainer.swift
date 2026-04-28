@@ -7,9 +7,11 @@ import Networking
 public struct AppContainer: Sendable {
     public let modelContainer: ModelContainer
     public let api: APIClient
+    public let manifestURL: URL
 
-    public init(modelContainer: ModelContainer, api: APIClient) {
+    public init(modelContainer: ModelContainer, api: APIClient, manifestURL: URL) {
         self.modelContainer = modelContainer
         self.api = api
+        self.manifestURL = manifestURL
     }
 }

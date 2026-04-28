@@ -70,7 +70,7 @@ public struct RootScaffold<DebugContent: View>: View {
                     modelContainer: appContainer.modelContainer,
                     assetRepo: ExerciseAssetRepository(
                         modelContainer: appContainer.modelContainer,
-                        manifestURL: URL(string: "https://placeholder.invalid/manifest.json")!
+                        manifestURL: appContainer.manifestURL
                     )
                 )
             }
@@ -92,7 +92,7 @@ public struct RootScaffold<DebugContent: View>: View {
                     modelContainer: appContainer.modelContainer,
                     assetRepo: ExerciseAssetRepository(
                         modelContainer: appContainer.modelContainer,
-                        manifestURL: URL(string: "https://placeholder.invalid/manifest.json")!
+                        manifestURL: appContainer.manifestURL
                     )
                 )
             }

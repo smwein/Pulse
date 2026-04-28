@@ -26,10 +26,12 @@ set +a
 
 WORKER_URL="${WORKER_URL:-https://pulse-proxy.smwein.workers.dev/}"
 DEVICE_TOKEN="${DEVICE_TOKEN:?DEVICE_TOKEN missing from worker/.dev.vars}"
+MANIFEST_URL="${MANIFEST_URL:-https://pub-5b5246fd91ca43198f55ea2e02173da2.r2.dev/exercises/manifest.json}"
 
 sed \
   -e "s|__WORKER_URL__|${WORKER_URL}|g" \
   -e "s|__DEVICE_TOKEN__|${DEVICE_TOKEN}|g" \
+  -e "s|__MANIFEST_URL__|${MANIFEST_URL}|g" \
   "$TEMPLATE" > "$OUTPUT"
 
 echo "baked: $OUTPUT"

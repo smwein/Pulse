@@ -4,6 +4,7 @@ import DesignSystem
 import Repositories
 import Onboarding
 import PlanGeneration
+import SwiftData
 
 public struct FirstRunGate<Content: View>: View {
     @State private var profile: Profile?
@@ -90,6 +91,14 @@ public struct FirstRunGate<Content: View>: View {
                 self.themeStore.setActiveCoach(id: coach.id)
             }
             self.isCheckingFirstRun = false
+        }
+        // Best-effort: refresh exercise asset manifest in the background.
+        let assetRepo = ExerciseAssetRepository(
+            modelContainer: appContainer.modelContainer,
+            manifestURL: appContainer.manifestURL
+        )
+        if (try? assetRepo.allAssets())?.isEmpty == true {
+            try? await assetRepo.refreshFromManifest()
         }
     }
 }

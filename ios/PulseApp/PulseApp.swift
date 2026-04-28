@@ -34,6 +34,6 @@ struct PulseApp: App {
             workerURL: Secrets.workerURL,
             deviceToken: Secrets.deviceToken
         ))
-        return AppContainer(modelContainer: modelContainer, api: api)
+        return AppContainer(modelContainer: modelContainer, api: api, manifestURL: Secrets.manifestURL)
     }
 }

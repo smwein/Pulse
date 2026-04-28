@@ -85,7 +85,7 @@ struct DebugFeatureSmokeView: View {
                 modelContainer: appContainer.modelContainer,
                 assetRepo: ExerciseAssetRepository(
                     modelContainer: appContainer.modelContainer,
-                    manifestURL: URL(string: "https://placeholder.invalid/manifest.json")!
+                    manifestURL: appContainer.manifestURL
                 )
             )
         }

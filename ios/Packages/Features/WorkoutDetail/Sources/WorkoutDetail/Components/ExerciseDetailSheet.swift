@@ -11,30 +11,40 @@ struct ExerciseDetailSheet: View {
     let exercise: PlannedExercise
     let asset: ExerciseAssetEntity?
 
+    @Environment(\.dismiss) private var dismiss
+
 #if os(iOS)
     @State private var player: AVPlayer?
     @State private var looper: AVPlayerLooper?
 #endif
 
     var body: some View {
-        ZStack {
-            PulseColors.bg0.color.ignoresSafeArea()
-            ScrollView {
-                VStack(alignment: .leading, spacing: PulseSpacing.lg) {
-                    Text(exercise.name)
-                        .pulseFont(.h1)
-                        .foregroundStyle(PulseColors.ink0.color)
-                    mediaSection
-                    instructionsSection
+        NavigationStack {
+            ZStack {
+                PulseColors.bg0.color.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: PulseSpacing.lg) {
+                        Text(exercise.name)
+                            .pulseFont(.h1)
+                            .foregroundStyle(PulseColors.ink0.color)
+                        mediaSection
+                        instructionsSection
+                    }
+                    .padding(PulseSpacing.lg)
                 }
-                .padding(PulseSpacing.lg)
             }
-        }
-        .preferredColorScheme(.dark)
+            .preferredColorScheme(.dark)
 #if os(iOS)
-        .onAppear { setupPlayer() }
-        .onDisappear { player?.pause() }
+            .onAppear { setupPlayer() }
+            .onDisappear { player?.pause() }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(PulseColors.ink0.color)
+                }
+            }
 #endif
+        }
     }
 
     @ViewBuilder
