@@ -78,6 +78,9 @@ After a fresh install on the iPhone 17 Pro simulator (run `Debug → Smoke → W
 - `PlanGenerationView.task` is unguarded against re-entry — low risk in Plan 3 since the only entry is FirstRunGate's fullScreenCover
 - `#Predicate` parameter capture pattern (parameter directly used in closure) in `WorkoutRepository.markCompleted` and `WorkoutRepository.deleteWorkout` — works on macOS 14 / iOS 17 SwiftData but should be aligned with `ProfileRepository.save`'s local-alias pattern in a future cleanup
 - WorkoutDetail's exercise row info-button double-fires `onTap` (sheet deduplication makes it harmless today)
+- `PlanGenStore` retry-once is cosmetic: `strictRetry` is wired through `PromptBuilder` but the captured `streamProvider` closure can't switch prompts mid-run, so attempt 2 sends the same prompt as attempt 1. Fix needs threading a flag through `StreamProvider` or exposing two closures. Spec'd improvement, not a regression
+- `PlanRepository.streamFirstPlan` derives `weekStart` with `Calendar(identifier: .gregorian)` (Sunday-based) while Home/WeekStrip use `.iso8601` (Monday-based). Cosmetic in Plan 3 since the strip is decorative; align before Plan 4 adds session-week comparisons
+- `onPersistedWorkout` callbacks read `latestWorkout()` instead of using the `WorkoutPlan` argument — works because `persist` is synchronous on `mainContext`, but fragile. Plan 4 should thread the new `WorkoutEntity.id` through the `.done` event
 - Bundled fallback workout deferred to Plan 4 alongside InWorkout
 
 ## Module map
