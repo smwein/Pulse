@@ -15,7 +15,14 @@ final class ExerciseAssetRepositoryTests: XCTestCase {
         try await repo.refreshFromManifest()
         let all = try repo.allAssets()
         XCTAssertEqual(all.count, 2)
-        XCTAssertEqual(repo.lookup(id: "back_squat")?.name, "Back Squat")
+        let squat = repo.lookup(id: "Back_Squat")
+        XCTAssertEqual(squat?.name, "Back Squat")
+        XCTAssertEqual(squat?.focus, "strength")
+        XCTAssertEqual(squat?.kind, "strength")
+        XCTAssertEqual(squat?.equipment, ["barbell"])
+        let stretch = repo.lookup(id: "World_Greatest_Stretch")
+        XCTAssertEqual(stretch?.kind, "mobility")
+        XCTAssertEqual(stretch?.equipment, [])
     }
 
     @MainActor

@@ -47,7 +47,8 @@ public struct FirstRunGate<Content: View>: View {
     }
 
     private var planRepo: PlanRepository {
-        PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api)
+        PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api,
+                       manifestURL: appContainer.manifestURL)
     }
 
     private var onboardingFlow: some View {

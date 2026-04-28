@@ -1,27 +1,30 @@
 {
-  "version": 1,
+  "version": 1777327426,
   "generatedAt": "2026-04-27T12:00:00Z",
+  "exerciseCount": 2,
   "exercises": [
     {
-      "id": "back_squat",
+      "id": "Back_Squat",
       "name": "Back Squat",
-      "focus": "legs",
+      "category": "strength",
       "level": "intermediate",
-      "kind": "strength",
-      "equipment": ["barbell"],
-      "videoURL": "https://pub-x.r2.dev/exercises/back_squat.mp4",
-      "posterURL": "https://pub-x.r2.dev/exercises/back_squat-poster.jpg",
+      "equipment": "barbell",
+      "primaryMuscles": ["quadriceps"],
+      "secondaryMuscles": ["glutes"],
+      "videoURL": "https://pub-x.r2.dev/exercises/Back_Squat.mp4",
+      "posterURL": "https://pub-x.r2.dev/exercises/Back_Squat-poster.jpg",
       "instructions": ["Stand tall", "Descend"]
     },
     {
-      "id": "world_greatest_stretch",
+      "id": "World_Greatest_Stretch",
       "name": "World's Greatest Stretch",
-      "focus": "mobility",
-      "level": "all",
-      "kind": "mobility",
-      "equipment": [],
-      "videoURL": "https://pub-x.r2.dev/exercises/world_greatest_stretch.mp4",
-      "posterURL": "https://pub-x.r2.dev/exercises/world_greatest_stretch-poster.jpg",
+      "category": "stretching",
+      "level": "beginner",
+      "equipment": null,
+      "primaryMuscles": ["hips"],
+      "secondaryMuscles": [],
+      "videoURL": "https://pub-x.r2.dev/exercises/World_Greatest_Stretch.mp4",
+      "posterURL": "https://pub-x.r2.dev/exercises/World_Greatest_Stretch-poster.jpg",
       "instructions": ["Lunge forward"]
     }
   ]

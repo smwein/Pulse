@@ -44,10 +44,29 @@ enum PromptBuilder {
     Do not include any other prose after the JSON block.
     """
 
-    static func planGenSystemPrompt(coach: Coach, strictRetry: Bool = false) -> String {
+    /// Maximum number of exercises to embed in the system prompt to keep it compact.
+    static let maxCatalogEntries = 50
+
+    static func planGenSystemPrompt(
+        coach: Coach,
+        availableExercises: [(id: String, name: String, equipment: [String])] = [],
+        strictRetry: Bool = false
+    ) -> String {
         var s = planGenFraming
             .replacingOccurrences(of: "{coachName}", with: coach.displayName)
             .replacingOccurrences(of: "{coachTagline}", with: coach.tagline)
+
+        if !availableExercises.isEmpty {
+            let sample = Array(availableExercises.prefix(maxCatalogEntries))
+            var catalog = "\n\nAvailable exercises (use these exact IDs for `exerciseID`):\n"
+            for ex in sample {
+                let equip = ex.equipment.isEmpty ? "body only" : ex.equipment.joined(separator: ", ")
+                catalog += "- \(ex.id) | \(ex.name) | \(equip)\n"
+            }
+            catalog += "\nOnly use IDs from this list. Do not invent new exercise IDs."
+            s += catalog
+        }
+
         if strictRetry {
             s += strictRetrySuffix
         }

@@ -33,4 +33,34 @@ final class PromptBuilderTests: XCTestCase {
                                                   strictRetry: true)
         XCTAssertTrue(s.contains("respond with valid JSON only"))
     }
+
+    func test_availableExercises_section_appearsWhenNonEmpty() {
+        let exercises: [(id: String, name: String, equipment: [String])] = [
+            (id: "Back_Squat", name: "Back Squat", equipment: ["barbell"]),
+            (id: "Air_Bike", name: "Air Bike", equipment: [])
+        ]
+        let s = PromptBuilder.planGenSystemPrompt(coach: Coach.byID("rex")!,
+                                                  availableExercises: exercises)
+        XCTAssertTrue(s.contains("Available exercises"))
+        XCTAssertTrue(s.contains("Back_Squat"))
+        XCTAssertTrue(s.contains("Air_Bike"))
+        XCTAssertTrue(s.contains("Only use IDs from this list"))
+    }
+
+    func test_availableExercises_section_absentWhenEmpty() {
+        let s = PromptBuilder.planGenSystemPrompt(coach: Coach.byID("rex")!)
+        XCTAssertFalse(s.contains("Available exercises"))
+        XCTAssertFalse(s.contains("Only use IDs from this list"))
+    }
+
+    func test_availableExercises_cappedAt50Entries() {
+        let exercises = (0..<100).map { i in
+            (id: "Ex_\(i)", name: "Exercise \(i)", equipment: ["dumbbell"])
+        }
+        let s = PromptBuilder.planGenSystemPrompt(coach: Coach.byID("rex")!,
+                                                  availableExercises: exercises)
+        // Should contain exactly 50 entries, not 100
+        let count = s.components(separatedBy: "Ex_").count - 1
+        XCTAssertEqual(count, PromptBuilder.maxCatalogEntries)
+    }
 }

@@ -96,7 +96,8 @@ struct DebugFeatureSmokeView: View {
         let profileRepo = ProfileRepository(modelContainer: appContainer.modelContainer)
         if let profile = profileRepo.currentProfile(),
            let coach = Coach.byID(profile.activeCoachID) {
-            let planRepo = PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api)
+            let planRepo = PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api,
+                                          manifestURL: appContainer.manifestURL)
             PlanGenerationView(
                 profile: profile, coach: coach, mode: .firstPlan,
                 streamProvider: { p in planRepo.streamFirstPlan(profile: p, coach: coach) },

@@ -120,7 +120,8 @@ public struct RootScaffold<DebugContent: View>: View {
     @ViewBuilder
     private func regenerateScreen(profile: Profile) -> some View {
         if let coach = Coach.byID(profile.activeCoachID) {
-            let planRepo = PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api)
+            let planRepo = PlanRepository(modelContainer: appContainer.modelContainer, api: appContainer.api,
+                                          manifestURL: appContainer.manifestURL)
             PlanGenerationView(
                 profile: profile,
                 coach: coach,

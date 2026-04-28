@@ -8,20 +8,23 @@ import Persistence
 public final class PlanRepository {
     public let modelContainer: ModelContainer
     private let api: APIClient?
+    private let manifestURL: URL?
 
-    public init(modelContainer: ModelContainer, api: APIClient) {
+    public init(modelContainer: ModelContainer, api: APIClient, manifestURL: URL? = nil) {
         self.modelContainer = modelContainer
         self.api = api
+        self.manifestURL = manifestURL
     }
 
     /// Test-only initializer. Bypasses APIClient — use only for read-side tests.
     public static func makeForTests(modelContainer: ModelContainer) -> PlanRepository {
-        PlanRepository(modelContainer: modelContainer, api: nil)
+        PlanRepository(modelContainer: modelContainer, api: nil, manifestURL: nil)
     }
 
-    private init(modelContainer: ModelContainer, api: APIClient?) {
+    private init(modelContainer: ModelContainer, api: APIClient?, manifestURL: URL?) {
         self.modelContainer = modelContainer
         self.api = api
+        self.manifestURL = manifestURL
     }
 
     public func listLatest(limit: Int = 5) throws -> [PlanEntity] {
@@ -105,7 +108,9 @@ public final class PlanRepository {
     /// High-level wrapper. Builds prompts from profile + coach, then streams.
     public func streamFirstPlan(profile: Profile, coach: Coach,
                                 now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
-        let system = PromptBuilder.planGenSystemPrompt(coach: coach)
+        let exercises = availableExercises(for: profile)
+        let system = PromptBuilder.planGenSystemPrompt(coach: coach,
+                                                      availableExercises: exercises)
         let user = PromptBuilder.planGenUserMessage(profile: profile, today: now)
         let calendar = Calendar(identifier: .gregorian)
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
@@ -121,6 +126,34 @@ public final class PlanRepository {
             try? workoutRepo.deleteWorkout(id: prior.id)
         }
         return streamFirstPlan(profile: profile, coach: coach, now: now)
+    }
+
+    // MARK: - Helpers
+
+    /// Returns a sample of exercises filtered by the profile's equipment list.
+    /// Limits to `PromptBuilder.maxCatalogEntries` entries so the system prompt
+    /// stays compact. Falls back to the full (unfiltered) sample if the
+    /// filtered set would be too thin.
+    private func availableExercises(for profile: Profile) -> [(id: String, name: String, equipment: [String])] {
+        // manifestURL is only used for fetching; we're reading the local DB here so any URL works.
+        let url = manifestURL ?? URL(string: "https://placeholder.invalid/")!
+        let assetRepo = ExerciseAssetRepository(modelContainer: modelContainer, manifestURL: url)
+        guard let all = try? assetRepo.allAssets(), !all.isEmpty else { return [] }
+
+        let userEquip = Set(profile.equipment.map { $0.lowercased() })
+        let bodyOnly  = userEquip.contains("none") || userEquip.isEmpty
+
+        // Filter: keep exercises whose equipment is body-only, or matches user's kit.
+        let filtered = all.filter { asset in
+            let assetEquip = asset.equipment.map { $0.lowercased() }
+            if assetEquip.isEmpty { return true }           // body-weight always ok
+            if bodyOnly           { return assetEquip.isEmpty || assetEquip == ["body only"] }
+            return assetEquip.allSatisfy { userEquip.contains($0) || $0 == "body only" }
+        }
+
+        let pool = filtered.count >= 10 ? filtered : all   // fall back to full set if too thin
+        let sample = pool.shuffled().prefix(PromptBuilder.maxCatalogEntries)
+        return sample.map { (id: $0.id, name: $0.name, equipment: $0.equipment) }
     }
 
     private func persist(plan: WorkoutPlan, weekStart: Date, modelUsed: String,

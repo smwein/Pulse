@@ -36,7 +36,7 @@ public final class ExerciseAssetRepository {
                 existing.focus = entry.focus
                 existing.level = entry.level
                 existing.kind = entry.kind
-                existing.equipment = entry.equipment
+                existing.equipment = entry.equipmentList
                 existing.videoURL = entry.videoURL
                 existing.posterURL = entry.posterURL
                 existing.instructionsJSON = (try? JSONEncoder().encode(entry.instructions)) ?? Data()
@@ -48,7 +48,7 @@ public final class ExerciseAssetRepository {
                     focus: entry.focus,
                     level: entry.level,
                     kind: entry.kind,
-                    equipment: entry.equipment,
+                    equipment: entry.equipmentList,
                     videoURL: entry.videoURL,
                     posterURL: entry.posterURL,
                     instructionsJSON: (try? JSONEncoder().encode(entry.instructions)) ?? Data(),
@@ -76,15 +76,36 @@ public final class ExerciseAssetRepository {
         let exercises: [Entry]
     }
 
+    /// Mirrors the shape published by `scripts/build-manifest.ts`.
+    /// Real manifest fields: id, name, category, level, equipment (String?),
+    /// primaryMuscles, secondaryMuscles, instructions, videoURL, posterURL.
+    /// `focus` is stored as the category value; `kind` is derived from category
+    /// (strength/stretching/cardio → strength/mobility/cardio).
     private struct Entry: Decodable {
         let id: String
         let name: String
-        let focus: String
+        let category: String      // "strength" | "stretching" | "cardio" | …
         let level: String
-        let kind: String
-        let equipment: [String]
+        let equipment: String?    // single string in manifest, may be null
         let videoURL: URL
         let posterURL: URL
         let instructions: [String]
+
+        var focus: String { category }
+
+        /// Normalise category to the three kinds the rest of the app recognises.
+        var kind: String {
+            switch category.lowercased() {
+            case "stretching": return "mobility"
+            case "cardio":     return "cardio"
+            default:           return "strength"
+            }
+        }
+
+        /// Wrap the nullable single-string equipment value into an array.
+        var equipmentList: [String] {
+            guard let e = equipment, !e.isEmpty else { return [] }
+            return [e]
+        }
     }
 }
