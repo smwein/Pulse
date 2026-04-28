@@ -8,7 +8,7 @@ public struct WeekStripView: View {
 
     public init(filledDates: Set<DateComponents>,
                 today: Date = Date(),
-                calendar: Calendar = Calendar(identifier: .gregorian)) {
+                calendar: Calendar = Calendar(identifier: .iso8601)) {
         self.filledDates = filledDates
         self.today = today
         self.calendar = calendar
