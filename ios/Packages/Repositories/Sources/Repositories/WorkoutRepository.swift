@@ -1,0 +1,36 @@
+import Foundation
+import SwiftData
+import Persistence
+
+@MainActor
+public final class WorkoutRepository {
+    public let modelContainer: ModelContainer
+
+    public init(modelContainer: ModelContainer) {
+        self.modelContainer = modelContainer
+    }
+
+    public func todaysWorkout(now: Date = Date(),
+                              calendar: Calendar = Calendar(identifier: .gregorian))
+                              throws -> WorkoutEntity? {
+        let dayStart = calendar.startOfDay(for: now)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+        let descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate {
+                $0.scheduledFor >= dayStart && $0.scheduledFor < dayEnd
+            },
+            sortBy: [SortDescriptor(\.scheduledFor, order: .forward)]
+        )
+        return try modelContainer.mainContext.fetch(descriptor).first
+    }
+
+    public func markCompleted(workoutID: UUID) throws {
+        let ctx = modelContainer.mainContext
+        let descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.id == workoutID }
+        )
+        guard let w = try ctx.fetch(descriptor).first else { return }
+        w.status = "completed"
+        try ctx.save()
+    }
+}
