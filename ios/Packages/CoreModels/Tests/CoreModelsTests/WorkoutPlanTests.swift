@@ -25,4 +25,20 @@ final class WorkoutPlanTests: XCTestCase {
         let decoded = try JSONDecoder.pulse.decode(WorkoutPlan.self, from: encoded)
         XCTAssertEqual(original, decoded)
     }
+
+    func test_plannedWorkout_decodesWhyFieldFromJSON() throws {
+        let json = #"""
+        {"id":"w1","scheduledFor":"2026-04-28T00:00:00Z","title":"Push","subtitle":"Upper body","workoutType":"Strength","durationMin":45,"blocks":[],"why":"Today we focus on horizontal pressing volume."}
+        """#
+        let pw = try JSONDecoder.pulse.decode(PlannedWorkout.self, from: Data(json.utf8))
+        XCTAssertEqual(pw.why, "Today we focus on horizontal pressing volume.")
+    }
+
+    func test_plannedWorkout_decodesWithMissingWhy() throws {
+        let json = #"""
+        {"id":"w1","scheduledFor":"2026-04-28T00:00:00Z","title":"Push","subtitle":"Upper body","workoutType":"Strength","durationMin":45,"blocks":[]}
+        """#
+        let pw = try JSONDecoder.pulse.decode(PlannedWorkout.self, from: Data(json.utf8))
+        XCTAssertNil(pw.why)
+    }
 }

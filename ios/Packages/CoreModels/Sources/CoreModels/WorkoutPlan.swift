@@ -18,9 +18,11 @@ public struct PlannedWorkout: Codable, Hashable, Identifiable, Sendable {
     public var workoutType: String   // "Strength" | "HIIT" | "Mobility" | ...
     public var durationMin: Int
     public var blocks: [WorkoutBlock]
+    public var why: String?
 
     public init(id: String, scheduledFor: Date, title: String, subtitle: String,
-                workoutType: String, durationMin: Int, blocks: [WorkoutBlock]) {
+                workoutType: String, durationMin: Int, blocks: [WorkoutBlock],
+                why: String? = nil) {
         self.id = id
         self.scheduledFor = scheduledFor
         self.title = title
@@ -28,6 +30,7 @@ public struct PlannedWorkout: Codable, Hashable, Identifiable, Sendable {
         self.workoutType = workoutType
         self.durationMin = durationMin
         self.blocks = blocks
+        self.why = why
     }
 }
 
