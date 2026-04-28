@@ -104,7 +104,7 @@ public final class PlanRepository {
 
     private func persist(plan: WorkoutPlan, weekStart: Date, modelUsed: String,
                          promptTokens: Int, completionTokens: Int, rawJSON: Data) throws {
-        let entity = PlanEntity(
+        let planEntity = PlanEntity(
             id: UUID(),
             weekStart: weekStart,
             generatedAt: Date(),
@@ -114,8 +114,35 @@ public final class PlanRepository {
             payloadJSON: rawJSON
         )
         let ctx = modelContainer.mainContext
-        ctx.insert(entity)
+        ctx.insert(planEntity)
+        for pw in plan.workouts {
+            let blocksJSON = (try? JSONEncoder.pulse.encode(pw.blocks)) ?? Data("[]".utf8)
+            let exercisesFlat = pw.blocks.flatMap { $0.exercises }
+            let exercisesJSON = (try? JSONEncoder.pulse.encode(exercisesFlat)) ?? Data("[]".utf8)
+            ctx.insert(WorkoutEntity(
+                id: UUID(),
+                planID: planEntity.id,
+                scheduledFor: pw.scheduledFor,
+                title: pw.title,
+                subtitle: pw.subtitle,
+                workoutType: pw.workoutType,
+                durationMin: pw.durationMin,
+                status: "scheduled",
+                blocksJSON: blocksJSON,
+                exercisesJSON: exercisesJSON,
+                why: pw.why
+            ))
+        }
         try ctx.save()
+    }
+
+    /// Test-only — exposes `persist` for unit tests of the fan-out logic.
+    public func _persistForTests(plan: WorkoutPlan, weekStart: Date,
+                                 modelUsed: String, promptTokens: Int,
+                                 completionTokens: Int, rawJSON: Data) throws {
+        try persist(plan: plan, weekStart: weekStart, modelUsed: modelUsed,
+                    promptTokens: promptTokens, completionTokens: completionTokens,
+                    rawJSON: rawJSON)
     }
 
     private static func extractTextDelta(eventData: String) -> String? {
