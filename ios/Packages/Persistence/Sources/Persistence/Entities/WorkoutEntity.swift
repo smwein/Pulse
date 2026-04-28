@@ -15,11 +15,12 @@ public final class WorkoutEntity {
     @Attribute(.externalStorage) public var blocksJSON: Data
     @Attribute(.externalStorage) public var exercisesJSON: Data
     @Attribute(.externalStorage) public var whispersJSON: Data?
+    public var why: String?
 
     public init(id: UUID, userID: UUID? = nil, planID: UUID, scheduledFor: Date,
                 title: String, subtitle: String, workoutType: String, durationMin: Int,
                 status: String, blocksJSON: Data, exercisesJSON: Data,
-                whispersJSON: Data? = nil) {
+                whispersJSON: Data? = nil, why: String? = nil) {
         self.id = id
         self.userID = userID
         self.planID = planID
@@ -32,5 +33,6 @@ public final class WorkoutEntity {
         self.blocksJSON = blocksJSON
         self.exercisesJSON = exercisesJSON
         self.whispersJSON = whispersJSON
+        self.why = why
     }
 }
