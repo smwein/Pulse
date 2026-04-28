@@ -48,6 +48,38 @@ Run this once after the final task; all items must pass before declaring Plan 2 
 - [ ] Live integration test passes when run with `PULSE_LIVE_TEST=1` env vars set
 - [ ] No git uncommitted changes; branch can be pushed cleanly to origin
 
+## Plan 3 acceptance checklist
+
+After a fresh install on the iPhone 17 Pro simulator (run `Debug → Smoke → Wipe` then force-quit + relaunch to reset to first-run state):
+
+- [x] App opens to OnboardingFlowView (no Profile present)
+- [x] All 6 onboarding steps validate before allowing Next
+- [x] Coach picker swaps the accent hue immediately
+- [x] On step 6 → Next, PlanGenerationView appears as a fullScreenCover
+- [x] Streaming UI shows: voiced header, checkpoint rows, mono streaming text
+- [x] Done state shows the WorkoutHeroCard with title pulled from the LLM-generated plan
+- [x] Tapping "View workout" pushes WorkoutDetailView; navigation back returns to Home
+- [x] Home shows: voiced greeting, hero card, week strip with today filled, regenerate CTA
+- [x] WorkoutDetail shows: hero pills, why card, blocks list, exercise rows with thumbnails, disabled Start CTA
+- [x] Tapping an exercise row opens the looping MP4 sheet with Done button
+- [x] Regenerate cycle: tap regenerate → PlanGen runs → return to Home → hero updates
+- [x] DebugFeatureSmokeView's "Wipe" button restores first-run state (forces re-onboarding)
+
+### Plan 3 fixes during smoke
+
+- Manifest URL plumbed via Secrets → AppContainer → ExerciseAssetRepository (commit `e916da0`)
+- ExerciseDetailSheet gained a Done button via toolbar (commit `e916da0`)
+- ExerciseAssetRepository.Entry decoder fixed to match real manifest shape (`category` not `focus`, nullable single-string `equipment`); 873 assets now load (commit `fb9c144`)
+- PromptBuilder + PlanRepository extended to inject up to 50 sampled catalog IDs into the system prompt so the LLM picks valid exercise IDs (commit `fb9c144`)
+
+### Plan 3 carry-overs to Plan 4
+
+- `PlanRepository.regenerate` deletes only the latest WorkoutEntity, not all rows for the prior PlanEntity. Safe in Plan 3 (no Sessions reference workouts yet); Plan 4 must revisit
+- `PlanGenerationView.task` is unguarded against re-entry — low risk in Plan 3 since the only entry is FirstRunGate's fullScreenCover
+- `#Predicate` parameter capture pattern (parameter directly used in closure) in `WorkoutRepository.markCompleted` and `WorkoutRepository.deleteWorkout` — works on macOS 14 / iOS 17 SwiftData but should be aligned with `ProfileRepository.save`'s local-alias pattern in a future cleanup
+- WorkoutDetail's exercise row info-button double-fires `onTap` (sheet deduplication makes it harmless today)
+- Bundled fallback workout deferred to Plan 4 alongside InWorkout
+
 ## Module map
 
 - `Packages/CoreModels` — pure value types (Plan, Workout, Feedback, Coach, …)
