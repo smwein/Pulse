@@ -27,6 +27,14 @@ packages:
     path: Packages/Repositories
   AppShell:
     path: Packages/AppShell
+  Onboarding:
+    path: Packages/Features/Onboarding
+  Home:
+    path: Packages/Features/Home
+  PlanGeneration:
+    path: Packages/Features/PlanGeneration
+  WorkoutDetail:
+    path: Packages/Features/WorkoutDetail
 targets:
   PulseApp:
     type: application
@@ -51,3 +59,7 @@ targets:
       - package: Networking
       - package: Repositories
       - package: AppShell
+      - package: Onboarding
+      - package: Home
+      - package: PlanGeneration
+      - package: WorkoutDetail
