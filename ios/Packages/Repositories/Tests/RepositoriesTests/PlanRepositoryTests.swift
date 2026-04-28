@@ -49,4 +49,30 @@ final class PlanRepositoryTests: XCTestCase {
         XCTAssertEqual(workouts.first?.title, "Push")
         XCTAssertEqual(workouts.first?.why, "Pressing volume.")
     }
+
+    @MainActor
+    func test_regenerate_deletesPriorLatestWorkoutBeforeStreaming() async throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let priorID = UUID()
+        let prior = WorkoutEntity(id: priorID, planID: UUID(),
+            scheduledFor: Date(timeIntervalSince1970: 1_700_000_000),
+            title: "Old", subtitle: "", workoutType: "Strength",
+            durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8))
+        ctx.insert(prior); try ctx.save()
+
+        let repo = PlanRepository.makeForTests(modelContainer: container)
+        // Cancel immediately — we only assert the pre-stream cleanup occurred.
+        let stream = repo.regenerate(profile: ProfileRepositoryTests.fixtureProfile(),
+                                      coach: Coach.byID("rex")!)
+        let task = Task { for try await _ in stream {} }
+        task.cancel()
+        _ = try? await task.value
+
+        // The deletion should still have happened synchronously before the stream began.
+        let remaining = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.id == priorID }))
+        XCTAssertTrue(remaining.isEmpty)
+    }
 }

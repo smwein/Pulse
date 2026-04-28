@@ -102,6 +102,27 @@ public final class PlanRepository {
         }
     }
 
+    /// High-level wrapper. Builds prompts from profile + coach, then streams.
+    public func streamFirstPlan(profile: Profile, coach: Coach,
+                                now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
+        let system = PromptBuilder.planGenSystemPrompt(coach: coach)
+        let user = PromptBuilder.planGenUserMessage(profile: profile, today: now)
+        let calendar = Calendar(identifier: .gregorian)
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+        return generatePlan(systemPrompt: system, userMessage: user, weekStart: weekStart)
+    }
+
+    /// Same as `streamFirstPlan` but deletes the prior latest workout first.
+    /// Safe in Plan 3 (no Session references); Plan 4 will revisit.
+    public func regenerate(profile: Profile, coach: Coach,
+                           now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
+        let workoutRepo = WorkoutRepository(modelContainer: modelContainer)
+        if let prior = try? workoutRepo.latestWorkout() {
+            try? workoutRepo.deleteWorkout(id: prior.id)
+        }
+        return streamFirstPlan(profile: profile, coach: coach, now: now)
+    }
+
     private func persist(plan: WorkoutPlan, weekStart: Date, modelUsed: String,
                          promptTokens: Int, completionTokens: Int, rawJSON: Data) throws {
         let planEntity = PlanEntity(

@@ -58,3 +58,12 @@ final class ProfileRepositoryTests: XCTestCase {
         XCTAssertEqual(entity?.accentHue, 220)  // Coach.byID("vera").accentHue
     }
 }
+
+extension ProfileRepositoryTests {
+    static func fixtureProfile() -> Profile {
+        Profile(id: UUID(), displayName: "Sam", goals: ["build muscle"],
+                level: .regular, equipment: ["dumbbells"],
+                frequencyPerWeek: 4, weeklyTargetMinutes: 180,
+                activeCoachID: "rex", createdAt: Date())
+    }
+}
