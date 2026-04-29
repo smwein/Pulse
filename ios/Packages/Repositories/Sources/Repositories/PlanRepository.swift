@@ -117,13 +117,25 @@ public final class PlanRepository {
         return generatePlan(systemPrompt: system, userMessage: user, weekStart: weekStart)
     }
 
-    /// Same as `streamFirstPlan` but deletes the prior latest workout first.
-    /// Safe in Plan 3 (no Session references); Plan 4 will revisit.
+    /// Same as `streamFirstPlan` but cascade-deletes the prior plan and all its
+    /// workouts first. Cleanup is best-effort; plan generation still streams even
+    /// if cleanup fails.
     public func regenerate(profile: Profile, coach: Coach,
                            now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
-        let workoutRepo = WorkoutRepository(modelContainer: modelContainer)
-        if let prior = try? workoutRepo.latestWorkout() {
-            try? workoutRepo.deleteWorkout(id: prior.id)
+        let ctx = modelContainer.mainContext
+        do {
+            let priorPlans = try ctx.fetch(FetchDescriptor<PlanEntity>(
+                sortBy: [SortDescriptor(\.generatedAt, order: .reverse)]))
+            if let prior = priorPlans.first {
+                let priorID = prior.id
+                let priorWorkouts = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
+                    predicate: #Predicate { $0.planID == priorID }))
+                for w in priorWorkouts { ctx.delete(w) }
+                ctx.delete(prior)
+                try ctx.save()
+            }
+        } catch {
+            // best-effort cleanup
         }
         return streamFirstPlan(profile: profile, coach: coach, now: now)
     }

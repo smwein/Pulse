@@ -54,8 +54,14 @@ final class PlanRepositoryTests: XCTestCase {
     func test_regenerate_deletesPriorLatestWorkoutBeforeStreaming() async throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext
+        let planID = UUID()
         let priorID = UUID()
-        let prior = WorkoutEntity(id: priorID, planID: UUID(),
+        ctx.insert(PlanEntity(id: planID,
+            weekStart: Date(timeIntervalSince1970: 1_700_000_000),
+            generatedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            modelUsed: "claude-opus-4-7", promptTokens: 10, completionTokens: 10,
+            payloadJSON: Data("{}".utf8)))
+        let prior = WorkoutEntity(id: priorID, planID: planID,
             scheduledFor: Date(timeIntervalSince1970: 1_700_000_000),
             title: "Old", subtitle: "", workoutType: "Strength",
             durationMin: 30, status: "scheduled",
@@ -74,5 +80,42 @@ final class PlanRepositoryTests: XCTestCase {
         let remaining = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
             predicate: #Predicate { $0.id == priorID }))
         XCTAssertTrue(remaining.isEmpty)
+    }
+
+    @MainActor
+    func test_regenerate_cascadeDeletesPriorPlanAndAllItsWorkouts() async throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let priorPlanID = UUID()
+        let plan = PlanEntity(id: priorPlanID,
+            weekStart: Date(timeIntervalSince1970: 1_700_000_000),
+            generatedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            modelUsed: "claude-opus-4-7", promptTokens: 10, completionTokens: 10,
+            payloadJSON: Data("{}".utf8))
+        ctx.insert(plan)
+        for i in 0..<7 {
+            ctx.insert(WorkoutEntity(id: UUID(), planID: priorPlanID,
+                scheduledFor: Date(timeIntervalSince1970: 1_700_000_000 + Double(i) * 86_400),
+                title: "W\(i)", subtitle: "", workoutType: "Strength", durationMin: 30,
+                status: "scheduled",
+                blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        }
+        try ctx.save()
+
+        let repo = PlanRepository.makeForTests(modelContainer: container)
+        let stream = repo.regenerate(profile: ProfileRepositoryTests.fixtureProfile(),
+                                     coach: Coach.byID("rex")!)
+        let task = Task { for try await _ in stream {} }
+        task.cancel()
+        _ = try? await task.value
+
+        // All 7 prior workouts and the prior PlanEntity should be gone.
+        let remainingWorkouts = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.planID == priorPlanID }))
+        XCTAssertTrue(remainingWorkouts.isEmpty)
+        let priorPlan = priorPlanID
+        let remainingPlans = try ctx.fetch(FetchDescriptor<PlanEntity>(
+            predicate: #Predicate { $0.id == priorPlan }))
+        XCTAssertTrue(remainingPlans.isEmpty)
     }
 }
