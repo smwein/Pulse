@@ -35,6 +35,8 @@ packages:
     path: Packages/Features/PlanGeneration
   WorkoutDetail:
     path: Packages/Features/WorkoutDetail
+  HealthKitClient:
+    path: Packages/HealthKitClient
 targets:
   PulseApp:
     type: application
@@ -63,3 +65,4 @@ targets:
       - package: Home
       - package: PlanGeneration
       - package: WorkoutDetail
+      - package: HealthKitClient
