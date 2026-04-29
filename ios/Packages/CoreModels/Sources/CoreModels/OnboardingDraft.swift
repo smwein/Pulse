@@ -42,7 +42,7 @@ public struct OnboardingDraft: Hashable, Sendable {
     }
 
     public enum Step: Int, CaseIterable, Sendable {
-        case name = 1, goals, level, equipment, frequency, coach
+        case name = 1, goals, level, equipment, frequency, coach, health
     }
 
     /// Returns true if the user can advance past `step` with current draft state.
@@ -54,6 +54,7 @@ public struct OnboardingDraft: Hashable, Sendable {
         case .equipment: return !equipment.isEmpty
         case .frequency: return frequencyPerWeek != nil && weeklyTargetMinutes != nil
         case .coach:     return activeCoachID != nil
+        case .health:    return true   // Skip is allowed
         }
     }
 }

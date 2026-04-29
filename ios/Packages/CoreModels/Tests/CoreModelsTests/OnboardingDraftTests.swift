@@ -58,4 +58,17 @@ final class OnboardingDraftTests: XCTestCase {
         d.weeklyTargetMinutes = 180
         XCTAssertTrue(d.canAdvance(from: .frequency))
     }
+
+    func test_step_healthExistsBetweenCoachAndEnd() {
+        let all = OnboardingDraft.Step.allCases
+        XCTAssertTrue(all.contains(.health))
+        // Order: ... coach < health
+        XCTAssertLessThan(OnboardingDraft.Step.coach.rawValue,
+                          OnboardingDraft.Step.health.rawValue)
+    }
+
+    func test_canAdvance_healthStep_alwaysTrue() {
+        let d = OnboardingDraft()
+        XCTAssertTrue(d.canAdvance(from: .health))
+    }
 }
