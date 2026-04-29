@@ -4,6 +4,7 @@ import DesignSystem
 import Networking
 import Persistence
 import Repositories
+import HealthKitClient
 
 @main
 struct PulseApp: App {
@@ -34,6 +35,7 @@ struct PulseApp: App {
             workerURL: Secrets.workerURL,
             deviceToken: Secrets.deviceToken
         ))
-        return AppContainer(modelContainer: modelContainer, api: api, manifestURL: Secrets.manifestURL)
+        return AppContainer(modelContainer: modelContainer, api: api, manifestURL: Secrets.manifestURL,
+                            healthKit: HealthKitClient.live())
     }
 }

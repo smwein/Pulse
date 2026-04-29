@@ -1,5 +1,6 @@
 import XCTest
 import CoreModels
+import HealthKitClient
 @testable import Repositories
 
 final class PromptBuilderTests: XCTestCase {
@@ -62,5 +63,27 @@ final class PromptBuilderTests: XCTestCase {
         // Should contain exactly 50 entries, not 100
         let count = s.components(separatedBy: "Ex_").count - 1
         XCTAssertEqual(count, PromptBuilder.maxCatalogEntries)
+    }
+
+    func test_planGenUserMessage_omitsHealthBlockWhenSummariesEmpty() {
+        let profile = ProfileRepositoryTests.fixtureProfile()
+        let date = Date(timeIntervalSince1970: 1_730_000_000)
+        let s = PromptBuilder.planGenUserMessage(profile: profile, today: date, summaries: nil)
+        XCTAssertFalse(s.contains("7-DAY HEALTH SUMMARY"))
+    }
+
+    func test_planGenUserMessage_includesHealthBlockWhenSummariesPresent() {
+        let profile = ProfileRepositoryTests.fixtureProfile()
+        let date = Date(timeIntervalSince1970: 1_730_000_000)
+        let summaries = SevenDayHealthSummary(
+            activity: .init(weeklyActiveMinutes: 187, targetActiveMinutes: 240),
+            hr: .init(avgRestingHR: 58, avgHRVSDNN: 52),
+            sleep: .init(avgSleepHours: 7.4))
+        let s = PromptBuilder.planGenUserMessage(profile: profile, today: date, summaries: summaries)
+        XCTAssertTrue(s.contains("7-DAY HEALTH SUMMARY"))
+        XCTAssertTrue(s.contains("avg resting HR: 58 bpm"))
+        XCTAssertTrue(s.contains("avg HRV (SDNN): 52 ms"))
+        XCTAssertTrue(s.contains("avg sleep: 7.4 hrs"))
+        XCTAssertTrue(s.contains("weekly active minutes: 187 / 240 target"))
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import CoreModels
+import HealthKitClient
 
 enum PromptBuilder {
     static let planGenFraming: String = """
@@ -73,13 +74,14 @@ enum PromptBuilder {
         return s
     }
 
-    static func planGenUserMessage(profile: Profile, today: Date) -> String {
+    static func planGenUserMessage(profile: Profile, today: Date,
+                                    summaries: SevenDayHealthSummary? = nil) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         let dateStr = formatter.string(from: today)
-        let goals = profile.goals.joined(separator: ", ")
-        let equipment = profile.equipment.joined(separator: ", ")
-        return """
+        let goals = profile.goals.isEmpty ? "none" : profile.goals.joined(separator: ", ")
+        let equipment = profile.equipment.isEmpty ? "none" : profile.equipment.joined(separator: ", ")
+        var s = """
         Profile:
         - Name: \(profile.displayName)
         - Goals: \(goals)
@@ -89,8 +91,24 @@ enum PromptBuilder {
         - Weekly target minutes: \(profile.weeklyTargetMinutes)
 
         Today: \(dateStr)
-
-        Generate today's workout.
         """
+        if let summaries, !summaries.isEmpty {
+            s += "\n\n" + Self.healthSummaryBlock(summaries)
+        }
+        s += "\n\nGenerate today's workout."
+        return s
+    }
+
+    static func healthSummaryBlock(_ s: SevenDayHealthSummary) -> String {
+        var lines: [String] = ["7-DAY HEALTH SUMMARY (Apple Health):"]
+        if let r = s.hr?.avgRestingHR { lines.append("- avg resting HR: \(r) bpm") }
+        if let h = s.hr?.avgHRVSDNN   { lines.append("- avg HRV (SDNN): \(h) ms") }
+        if let z = s.sleep?.avgSleepHours, z > 0 {
+            lines.append(String(format: "- avg sleep: %.1f hrs", z))
+        }
+        if let a = s.activity {
+            lines.append("- weekly active minutes: \(a.weeklyActiveMinutes) / \(a.targetActiveMinutes) target")
+        }
+        return lines.joined(separator: "\n")
     }
 }

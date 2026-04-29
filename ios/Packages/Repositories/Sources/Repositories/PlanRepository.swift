@@ -3,6 +3,7 @@ import SwiftData
 import CoreModels
 import Networking
 import Persistence
+import HealthKitClient
 
 @MainActor
 public final class PlanRepository {
@@ -116,11 +117,12 @@ public final class PlanRepository {
 
     /// High-level wrapper. Builds prompts from profile + coach, then streams.
     public func streamFirstPlan(profile: Profile, coach: Coach,
-                                now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
+                                now: Date = Date(),
+                                summaries: SevenDayHealthSummary? = nil) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
         let exercises = availableExercises(for: profile)
         let system = PromptBuilder.planGenSystemPrompt(coach: coach,
                                                       availableExercises: exercises)
-        let user = PromptBuilder.planGenUserMessage(profile: profile, today: now)
+        let user = PromptBuilder.planGenUserMessage(profile: profile, today: now, summaries: summaries)
         let weekStart = Self._weekStart(for: now)
         return generatePlan(systemPrompt: system, userMessage: user, weekStart: weekStart)
     }
@@ -129,7 +131,8 @@ public final class PlanRepository {
     /// workouts first. Cleanup is best-effort; plan generation still streams even
     /// if cleanup fails.
     public func regenerate(profile: Profile, coach: Coach,
-                           now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
+                           now: Date = Date(),
+                           summaries: SevenDayHealthSummary? = nil) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
         let ctx = modelContainer.mainContext
         do {
             let priorPlans = try ctx.fetch(FetchDescriptor<PlanEntity>(
@@ -145,7 +148,7 @@ public final class PlanRepository {
         } catch {
             // best-effort cleanup
         }
-        return streamFirstPlan(profile: profile, coach: coach, now: now)
+        return streamFirstPlan(profile: profile, coach: coach, now: now, summaries: summaries)
     }
 
     // MARK: - Helpers

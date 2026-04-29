@@ -5,11 +5,13 @@ import Repositories
 import Onboarding
 import PlanGeneration
 import SwiftData
+import HealthKitClient
 
 public struct FirstRunGate<Content: View>: View {
     @State private var profile: Profile?
     @State private var isCheckingFirstRun = true
     @State private var pendingProfileForPlanGen: Profile?
+    @State private var summaries: SevenDayHealthSummary?
     private let appContainer: AppContainer
     private let themeStore: ThemeStore
     private let content: () -> Content
@@ -56,7 +58,10 @@ public struct FirstRunGate<Content: View>: View {
             profileRepo: profileRepo,
             themeStore: themeStore
         ) { newProfile in
+            // Capture HK summaries before presenting plan-gen.
+            let s = await appContainer.healthKit.sevenDaySummary()
             await MainActor.run {
+                summaries = s
                 profile = newProfile
                 pendingProfileForPlanGen = newProfile
             }
@@ -70,7 +75,8 @@ public struct FirstRunGate<Content: View>: View {
                 profile: profile,
                 coach: coach,
                 mode: .firstPlan,
-                streamProvider: { p in self.planRepo.streamFirstPlan(profile: p, coach: coach) },
+                streamProvider: { p in self.planRepo.streamFirstPlan(profile: p, coach: coach,
+                                                                     summaries: self.summaries) },
                 onPersistedWorkout: { _, ids in
                     if let id = ids.first {
                         let repo = WorkoutRepository(modelContainer: self.appContainer.modelContainer)

@@ -9,11 +9,12 @@ let package = Package(
         .package(path: "../CoreModels"),
         .package(path: "../Persistence"),
         .package(path: "../Networking"),
+        .package(path: "../HealthKitClient"),
     ],
     targets: [
         .target(
             name: "Repositories",
-            dependencies: ["CoreModels", "Persistence", "Networking"]
+            dependencies: ["CoreModels", "Persistence", "Networking", "HealthKitClient"]
         ),
         .testTarget(
             name: "RepositoriesTests",

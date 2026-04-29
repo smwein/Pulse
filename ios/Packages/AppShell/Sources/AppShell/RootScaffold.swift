@@ -5,11 +5,13 @@ import Home
 import WorkoutDetail
 import PlanGeneration
 import CoreModels
+import HealthKitClient
 
 public struct RootScaffold<DebugContent: View>: View {
     @State private var selectedTab: PulseTab = .today
     @State private var selectedWorkoutID: UUID?
     @State private var regeneratePresentedFor: Profile?
+    @State private var regenerateSummaries: SevenDayHealthSummary?
     private let appContainer: AppContainer
     private let themeStore: ThemeStore
     private let debugContent: () -> DebugContent
@@ -113,7 +115,13 @@ public struct RootScaffold<DebugContent: View>: View {
     private func triggerRegenerate() {
         let repo = ProfileRepository(modelContainer: appContainer.modelContainer)
         if let p = repo.currentProfile() {
-            regeneratePresentedFor = p
+            Task {
+                let s = await appContainer.healthKit.sevenDaySummary()
+                await MainActor.run {
+                    regenerateSummaries = s
+                    regeneratePresentedFor = p
+                }
+            }
         }
     }
 
@@ -126,7 +134,8 @@ public struct RootScaffold<DebugContent: View>: View {
                 profile: profile,
                 coach: coach,
                 mode: .regenerate,
-                streamProvider: { p in planRepo.regenerate(profile: p, coach: coach) },
+                streamProvider: { p in planRepo.regenerate(profile: p, coach: coach,
+                                                           summaries: regenerateSummaries) },
                 onPersistedWorkout: { _, ids in
                     if let id = ids.first {
                         let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
