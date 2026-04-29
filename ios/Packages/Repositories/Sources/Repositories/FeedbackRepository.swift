@@ -66,10 +66,18 @@ public final class FeedbackRepository {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    let user = """
+                    Prior plan:
+                    \(priorPlanJSON)
+
+                    Latest workout feedback:
+                    \(feedbackJSON)
+
+                    Produce an updated plan + diff.
+                    """
                     let request = AnthropicRequest.adaptation(
                         systemPrompt: systemPrompt,
-                        priorPlanJSON: priorPlanJSON,
-                        feedbackJSON: feedbackJSON
+                        userMessage: user
                     )
                     var fullText = ""
                     var modelUsed = "claude-opus-4-7"

@@ -35,23 +35,13 @@ public extension AnthropicRequest {
         )
     }
 
-    static func adaptation(systemPrompt: String, priorPlanJSON: String,
-                           feedbackJSON: String) -> AnthropicRequest {
-        let user = """
-        Prior plan:
-        \(priorPlanJSON)
-
-        Latest workout feedback:
-        \(feedbackJSON)
-
-        Produce an updated plan + diff.
-        """
-        return AnthropicRequest(
+    static func adaptation(systemPrompt: String, userMessage: String) -> AnthropicRequest {
+        AnthropicRequest(
             model: "claude-opus-4-7",
             maxTokens: 4096,
             system: systemPrompt,
             systemCacheControl: .ephemeral,
-            messages: [.init(role: .user, content: user)]
+            messages: [.init(role: .user, content: userMessage)]
         )
     }
 }

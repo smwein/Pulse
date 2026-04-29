@@ -19,8 +19,7 @@ final class AnthropicRequestTests: XCTestCase {
     func test_adaptationBuilderUsesOpus() {
         let req = AnthropicRequest.adaptation(
             systemPrompt: "You are Pulse.",
-            priorPlanJSON: "{}",
-            feedbackJSON: "{}"
+            userMessage: "Prior plan: {}\n\nLatest workout feedback: {}"
         )
         XCTAssertEqual(req.model, "claude-opus-4-7")
         XCTAssertGreaterThan(req.messages.count, 0)
