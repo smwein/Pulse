@@ -18,4 +18,28 @@ final class AdaptationDiffTests: XCTestCase {
         XCTAssertEqual(diff, decoded)
         XCTAssertEqual(decoded.changes.count, 4)
     }
+
+    func test_adaptationPayload_codableRoundTrip() throws {
+        let pw = PlannedWorkout(id: "w1",
+            scheduledFor: Date(timeIntervalSince1970: 1_730_000_000),
+            title: "Push", subtitle: "Upper",
+            workoutType: "Strength", durationMin: 45,
+            blocks: [], why: "Focus on bilateral pressing volume.")
+        let payload = AdaptationPayload(originalWorkoutID: UUID(),
+            newWorkout: pw,
+            adjustments: [
+                Adjustment(id: "a1", label: "Trim main", detail: "Drop one accessory pair"),
+                Adjustment(id: "a2", label: "Bilateral focus", detail: "Replace 3 unilateral moves"),
+            ],
+            rationale: "You felt this was too long; we trimmed it and held the strength stimulus.")
+        let data = try JSONEncoder.pulse.encode(payload)
+        let round = try JSONDecoder.pulse.decode(AdaptationPayload.self, from: data)
+        XCTAssertEqual(round.adjustments.count, 2)
+        XCTAssertEqual(round.newWorkout.title, "Push")
+    }
+
+    func test_adjustment_id_isStable() {
+        let a = Adjustment(id: "x", label: "L", detail: "D")
+        XCTAssertEqual(a.id, "x")
+    }
 }

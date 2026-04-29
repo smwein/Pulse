@@ -86,3 +86,30 @@ public struct AdaptationDiff: Codable, Hashable, Sendable {
         self.changes = changes
     }
 }
+
+public struct Adjustment: Codable, Hashable, Sendable, Identifiable {
+    public var id: String
+    public var label: String     // ~3 words
+    public var detail: String    // ~6-10 words
+
+    public init(id: String, label: String, detail: String) {
+        self.id = id
+        self.label = label
+        self.detail = detail
+    }
+}
+
+public struct AdaptationPayload: Codable, Hashable, Sendable {
+    public var originalWorkoutID: UUID
+    public var newWorkout: PlannedWorkout
+    public var adjustments: [Adjustment]
+    public var rationale: String
+
+    public init(originalWorkoutID: UUID, newWorkout: PlannedWorkout,
+                adjustments: [Adjustment], rationale: String) {
+        self.originalWorkoutID = originalWorkoutID
+        self.newWorkout = newWorkout
+        self.adjustments = adjustments
+        self.rationale = rationale
+    }
+}
