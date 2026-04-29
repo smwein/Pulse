@@ -34,5 +34,6 @@ public final class OnboardingStore {
         }
     }
 
-    public var isAtCoachStep: Bool { currentStep == .coach }
+    public var isAtFinalStep: Bool { currentStep == .health }
+    public var isAtCoachStep: Bool { currentStep == .coach }   // retained for tests / back-compat
 }

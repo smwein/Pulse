@@ -5,6 +5,7 @@ import Repositories
 
 public struct OnboardingFlowView: View {
     @State private var store: OnboardingStore
+    @State private var healthConnected = false
     private let profileRepo: ProfileRepository
     private let themeStore: ThemeStore
     private let onComplete: (Profile) async -> Void
@@ -57,6 +58,7 @@ public struct OnboardingFlowView: View {
             FrequencyStepView(frequencyPerWeek: $store.draft.frequencyPerWeek,
                               weeklyTargetMinutes: $store.draft.weeklyTargetMinutes)
         case .coach:     CoachPickStepView(activeCoachID: $store.draft.activeCoachID)
+        case .health:    HealthStepView(didConnect: $healthConnected)
         }
     }
 
@@ -67,10 +69,10 @@ public struct OnboardingFlowView: View {
             }
             Spacer()
             PulseButton(
-                store.isAtCoachStep ? "Generate my first workout" : "Next",
+                footerCTALabel,
                 variant: .primary
             ) {
-                if store.isAtCoachStep {
+                if store.isAtFinalStep {
                     Task { await complete() }
                 } else {
                     store.advance()
@@ -79,6 +81,13 @@ public struct OnboardingFlowView: View {
             .disabled(!store.canAdvanceFromCurrent)
         }
         .padding(PulseSpacing.lg)
+    }
+
+    private var footerCTALabel: String {
+        if store.isAtFinalStep {
+            return healthConnected ? "Generate my first workout" : "Skip & generate workout"
+        }
+        return "Next"
     }
 
     private func complete() async {
