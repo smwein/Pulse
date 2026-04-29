@@ -105,6 +105,12 @@ public final class PlanRepository {
         }
     }
 
+    public static func _weekStart(for now: Date) -> Date {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        return calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+    }
+
     /// High-level wrapper. Builds prompts from profile + coach, then streams.
     public func streamFirstPlan(profile: Profile, coach: Coach,
                                 now: Date = Date()) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
@@ -112,8 +118,7 @@ public final class PlanRepository {
         let system = PromptBuilder.planGenSystemPrompt(coach: coach,
                                                       availableExercises: exercises)
         let user = PromptBuilder.planGenUserMessage(profile: profile, today: now)
-        let calendar = Calendar(identifier: .gregorian)
-        let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+        let weekStart = Self._weekStart(for: now)
         return generatePlan(systemPrompt: system, userMessage: user, weekStart: weekStart)
     }
 

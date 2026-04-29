@@ -118,4 +118,17 @@ final class PlanRepositoryTests: XCTestCase {
             predicate: #Predicate { $0.id == priorPlan }))
         XCTAssertTrue(remainingPlans.isEmpty)
     }
+
+    @MainActor
+    func test_streamFirstPlan_weekStartUsesISO8601MondayBased() async throws {
+        // Tuesday 2026-04-21 (UTC). ISO8601 week-of-year starts on Monday 2026-04-20.
+        let tuesday = ISO8601DateFormatter().date(from: "2026-04-21T12:00:00Z")!
+        var iso = Calendar(identifier: .iso8601)
+        iso.timeZone = TimeZone(secondsFromGMT: 0)!
+        let expectedMonday = iso.dateInterval(of: .weekOfYear, for: tuesday)!.start
+        // Compare what PlanRepository would compute. Expose the helper for test
+        // by adding `_weekStart(for:)` (Step 3).
+        let computed = PlanRepository._weekStart(for: tuesday)
+        XCTAssertEqual(computed, expectedMonday)
+    }
 }
