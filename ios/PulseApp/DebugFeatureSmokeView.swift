@@ -101,10 +101,11 @@ struct DebugFeatureSmokeView: View {
             PlanGenerationView(
                 profile: profile, coach: coach, mode: .firstPlan,
                 streamProvider: { p in planRepo.streamFirstPlan(profile: p, coach: coach) },
-                onPersistedWorkout: { _ in
-                    let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
-                    if let w = try? repo.latestWorkout() {
-                        return DebugWorkoutHandle(id: w.id, title: w.title)
+                onPersistedWorkout: { _, ids in
+                    if let id = ids.first {
+                        let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
+                        let title = (try? repo.latestWorkout())?.title ?? "Today's workout"
+                        return DebugWorkoutHandle(id: id, title: title)
                     }
                     return nil
                 },

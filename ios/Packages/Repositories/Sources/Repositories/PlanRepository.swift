@@ -85,10 +85,13 @@ public final class PlanRepository {
                                 throw APIClientError.decoding("no fenced ```json block in stream")
                             }
                             let plan = try JSONDecoder.pulse.decode(WorkoutPlan.self, from: data)
-                            try await persist(plan: plan, weekStart: weekStart, modelUsed: modelUsed,
-                                              promptTokens: promptTokens, completionTokens: completionTokens,
-                                              rawJSON: data)
-                            continuation.yield(.done(plan, modelUsed: modelUsed,
+                            let insertedIDs = try await persist(plan: plan, weekStart: weekStart,
+                                                                modelUsed: modelUsed,
+                                                                promptTokens: promptTokens,
+                                                                completionTokens: completionTokens,
+                                                                rawJSON: data)
+                            continuation.yield(.done(plan, insertedWorkoutIDs: insertedIDs,
+                                                     modelUsed: modelUsed,
                                                      promptTokens: promptTokens,
                                                      completionTokens: completionTokens))
                             continuation.finish()
@@ -174,7 +177,7 @@ public final class PlanRepository {
     }
 
     private func persist(plan: WorkoutPlan, weekStart: Date, modelUsed: String,
-                         promptTokens: Int, completionTokens: Int, rawJSON: Data) throws {
+                         promptTokens: Int, completionTokens: Int, rawJSON: Data) throws -> [UUID] {
         let planEntity = PlanEntity(
             id: UUID(),
             weekStart: weekStart,
@@ -186,12 +189,14 @@ public final class PlanRepository {
         )
         let ctx = modelContainer.mainContext
         ctx.insert(planEntity)
+        var inserted: [UUID] = []
         for pw in plan.workouts {
             let blocksJSON = (try? JSONEncoder.pulse.encode(pw.blocks)) ?? Data("[]".utf8)
             let exercisesFlat = pw.blocks.flatMap { $0.exercises }
             let exercisesJSON = (try? JSONEncoder.pulse.encode(exercisesFlat)) ?? Data("[]".utf8)
+            let id = UUID()
             ctx.insert(WorkoutEntity(
-                id: UUID(),
+                id: id,
                 planID: planEntity.id,
                 scheduledFor: pw.scheduledFor,
                 title: pw.title,
@@ -203,14 +208,17 @@ public final class PlanRepository {
                 exercisesJSON: exercisesJSON,
                 why: pw.why
             ))
+            inserted.append(id)
         }
         try ctx.save()
+        return inserted
     }
 
     /// Test-only — exposes `persist` for unit tests of the fan-out logic.
+    @discardableResult
     public func _persistForTests(plan: WorkoutPlan, weekStart: Date,
                                  modelUsed: String, promptTokens: Int,
-                                 completionTokens: Int, rawJSON: Data) throws {
+                                 completionTokens: Int, rawJSON: Data) throws -> [UUID] {
         try persist(plan: plan, weekStart: weekStart, modelUsed: modelUsed,
                     promptTokens: promptTokens, completionTokens: completionTokens,
                     rawJSON: rawJSON)

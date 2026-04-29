@@ -36,7 +36,7 @@ final class PlanGenStoreTests: XCTestCase {
         let store = PlanGenStore(coach: Coach.byID("rex")!,
                                  mode: .firstPlan,
                                  streamProvider: { _ in self.fakeStream(yields: []) },
-                                 onPersistedWorkout: { _ in nil })
+                                 onPersistedWorkout: { _, _ in nil })
         await store.run(profile: makeProfile())
         if case .streaming(_, _, let attempt) = store.state {
             XCTAssertEqual(attempt, 1)
@@ -55,7 +55,7 @@ final class PlanGenStoreTests: XCTestCase {
         let store = PlanGenStore(coach: Coach.byID("rex")!,
                                  mode: .firstPlan,
                                  streamProvider: { _ in self.fakeStream(yields: updates) },
-                                 onPersistedWorkout: { _ in nil })
+                                 onPersistedWorkout: { _, _ in nil })
         await store.run(profile: makeProfile())
         if case .streaming(let cps, _, _) = store.state {
             XCTAssertEqual(cps, ["Reading profile", "Selecting exercises"])
@@ -70,7 +70,7 @@ final class PlanGenStoreTests: XCTestCase {
         let store = PlanGenStore(coach: Coach.byID("rex")!,
                                  mode: .firstPlan,
                                  streamProvider: { _ in self.fakeStream(yields: updates) },
-                                 onPersistedWorkout: { _ in nil })
+                                 onPersistedWorkout: { _, _ in nil })
         await store.run(profile: makeProfile())
         if case .streaming(_, let text, _) = store.state {
             let visibleLines = text.split(separator: "\n", omittingEmptySubsequences: false)
@@ -83,14 +83,14 @@ final class PlanGenStoreTests: XCTestCase {
     func test_done_transitionsToDone_andCallsOnPersistedWorkout() async throws {
         let plan = samplePlan()
         let updates: [PlanStreamUpdate] = [
-            .done(plan, modelUsed: "claude-opus-4-7", promptTokens: 100, completionTokens: 200),
+            .done(plan, insertedWorkoutIDs: [], modelUsed: "claude-opus-4-7", promptTokens: 100, completionTokens: 200),
         ]
         var capturedPlan: WorkoutPlan?
         let store = PlanGenStore(
             coach: Coach.byID("rex")!,
             mode: .firstPlan,
             streamProvider: { _ in self.fakeStream(yields: updates) },
-            onPersistedWorkout: { p in
+            onPersistedWorkout: { p, _ in
                 capturedPlan = p
                 return MockWorkoutHandle(id: UUID(), title: p.workouts.first!.title)
             }
@@ -117,7 +117,7 @@ final class PlanGenStoreTests: XCTestCase {
                     return self.fakeStream(yields: [.checkpoint("retry attempt")])
                 }
             },
-            onPersistedWorkout: { _ in nil }
+            onPersistedWorkout: { _, _ in nil }
         )
         await store.run(profile: makeProfile())
         XCTAssertEqual(calls, 2)
@@ -131,7 +131,7 @@ final class PlanGenStoreTests: XCTestCase {
             coach: Coach.byID("rex")!,
             mode: .firstPlan,
             streamProvider: { _ in self.failingStream(error: DummyError.boom) },
-            onPersistedWorkout: { _ in nil }
+            onPersistedWorkout: { _, _ in nil }
         )
         await store.run(profile: makeProfile())
         if case .failed = store.state {} else {
@@ -144,7 +144,7 @@ final class PlanGenStoreTests: XCTestCase {
             coach: Coach.byID("rex")!,
             mode: .firstPlan,
             streamProvider: { _ in self.failingStream(error: DummyError.boom) },
-            onPersistedWorkout: { _ in nil }
+            onPersistedWorkout: { _, _ in nil }
         )
         await store.run(profile: makeProfile())
         // Now we're .failed; manually reset

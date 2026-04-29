@@ -127,10 +127,11 @@ public struct RootScaffold<DebugContent: View>: View {
                 coach: coach,
                 mode: .regenerate,
                 streamProvider: { p in planRepo.regenerate(profile: p, coach: coach) },
-                onPersistedWorkout: { _ in
-                    let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
-                    if let w = try? repo.latestWorkout() {
-                        return PersistedRegenHandle(id: w.id, title: w.title)
+                onPersistedWorkout: { _, ids in
+                    if let id = ids.first {
+                        let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
+                        let title = (try? repo.latestWorkout())?.title ?? "Today's workout"
+                        return PersistedRegenHandle(id: id, title: title)
                     }
                     return nil
                 },

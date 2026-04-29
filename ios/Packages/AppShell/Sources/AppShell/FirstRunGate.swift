@@ -71,10 +71,11 @@ public struct FirstRunGate<Content: View>: View {
                 coach: coach,
                 mode: .firstPlan,
                 streamProvider: { p in self.planRepo.streamFirstPlan(profile: p, coach: coach) },
-                onPersistedWorkout: { _ in
-                    let repo = WorkoutRepository(modelContainer: self.appContainer.modelContainer)
-                    if let w = try? repo.latestWorkout() {
-                        return PersistedWorkoutHandle(id: w.id, title: w.title)
+                onPersistedWorkout: { _, ids in
+                    if let id = ids.first {
+                        let repo = WorkoutRepository(modelContainer: self.appContainer.modelContainer)
+                        let title = (try? repo.latestWorkout())?.title ?? "Today's workout"
+                        return PersistedWorkoutHandle(id: id, title: title)
                     }
                     return nil
                 },

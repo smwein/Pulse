@@ -6,5 +6,6 @@ import CoreModels
 public enum PlanStreamUpdate: Sendable {
     case checkpoint(String)
     case textDelta(String)              // user-visible passthrough text
-    case done(WorkoutPlan, modelUsed: String, promptTokens: Int, completionTokens: Int)
+    case done(WorkoutPlan, insertedWorkoutIDs: [UUID],
+              modelUsed: String, promptTokens: Int, completionTokens: Int)
 }

@@ -27,7 +27,7 @@ public final class PlanGenStore {
     public let mode: PlanGenMode
 
     public typealias StreamProvider = (Profile) -> AsyncThrowingStream<PlanStreamUpdate, Error>
-    public typealias OnPersistedWorkout = (WorkoutPlan) -> (any WorkoutHandle)?
+    public typealias OnPersistedWorkout = (WorkoutPlan, [UUID]) -> (any WorkoutHandle)?
 
     private let streamProvider: StreamProvider
     private let onPersistedWorkout: OnPersistedWorkout
@@ -79,8 +79,8 @@ public final class PlanGenStore {
             text += chunk
             text = Self.trimToLastLines(text, count: Self.maxVisibleLines)
             state = .streaming(checkpoints: cps, text: text, attempt: attempt)
-        case .done(let plan, _, _, _):
-            if let handle = onPersistedWorkout(plan) {
+        case .done(let plan, let ids, _, _, _):
+            if let handle = onPersistedWorkout(plan, ids) {
                 state = .done(handle)
             } else {
                 state = .failed(NoWorkoutHandleError())
