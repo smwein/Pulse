@@ -1,6 +1,8 @@
 import XCTest
+import SwiftData
 import CoreModels
 import HealthKitClient
+import Persistence
 @testable import Repositories
 
 final class PromptBuilderTests: XCTestCase {
@@ -85,5 +87,41 @@ final class PromptBuilderTests: XCTestCase {
         XCTAssertTrue(s.contains("avg HRV (SDNN): 52 ms"))
         XCTAssertTrue(s.contains("avg sleep: 7.4 hrs"))
         XCTAssertTrue(s.contains("weekly active minutes: 187 / 240 target"))
+    }
+
+    @MainActor
+    func test_adaptationSystemPrompt_includesCoachAndCatalog() {
+        let coach = Coach.byID("rex")!
+        let s = PromptBuilder.adaptationSystemPrompt(coach: coach,
+            availableExercises: [(id: "back-squat", name: "Back Squat", equipment: ["barbell"])])
+        XCTAssertTrue(s.contains(coach.displayName))
+        XCTAssertTrue(s.contains("back-squat"))
+        XCTAssertTrue(s.contains("⟦CHECKPOINT"))
+    }
+
+    @MainActor
+    func test_adaptationUserMessage_omitsHealthBlockWhenEmpty() throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let next = WorkoutEntity(id: UUID(), planID: UUID(), scheduledFor: Date(),
+            title: "Pull", subtitle: "Upper", workoutType: "Strength",
+            durationMin: 45, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8))
+        ctx.insert(next); try ctx.save()
+        let feedback = WorkoutFeedback(sessionID: UUID(), submittedAt: Date(),
+            rating: 4, intensity: 4, mood: .good, tags: ["too_long"],
+            exerciseRatings: ["back-squat": .up], note: nil)
+        let profile = ProfileRepositoryTests.fixtureProfile()
+        let s = PromptBuilder.adaptationUserMessage(
+            nextWorkout: next,
+            justCompletedTitle: "Push",
+            justCompletedDurationSec: 2538,
+            setLogs: [],
+            feedback: feedback,
+            profile: profile,
+            summaries: nil)
+        XCTAssertTrue(s.contains("rating: 4/5"))
+        XCTAssertTrue(s.contains("Pull"))
+        XCTAssertFalse(s.contains("7-DAY HEALTH SUMMARY"))
     }
 }
