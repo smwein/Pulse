@@ -53,4 +53,13 @@ public final class WorkoutRepository {
         }
         try ctx.save()
     }
+
+    public func workoutForID(_ id: UUID) throws -> WorkoutEntity? {
+        let ctx = modelContainer.mainContext
+        let target = id
+        let descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.id == target }
+        )
+        return try ctx.fetch(descriptor).first
+    }
 }

@@ -97,4 +97,19 @@ final class WorkoutRepositoryTests: XCTestCase {
         try repo.deleteWorkout(id: id)
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<WorkoutEntity>()).count, 0)
     }
+
+    @MainActor
+    func test_workoutForID_returnsMatchingRow() throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let id = UUID()
+        ctx.insert(WorkoutEntity(id: id, planID: UUID(),
+            scheduledFor: Date(), title: "Find me", subtitle: "",
+            workoutType: "Strength", durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        try ctx.save()
+        let repo = WorkoutRepository(modelContainer: container)
+        XCTAssertEqual(try repo.workoutForID(id)?.title, "Find me")
+        XCTAssertNil(try repo.workoutForID(UUID()))
+    }
 }
