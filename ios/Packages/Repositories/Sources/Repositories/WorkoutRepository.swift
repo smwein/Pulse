@@ -11,13 +11,14 @@ public final class WorkoutRepository {
     }
 
     public func todaysWorkout(now: Date = Date(),
-                              calendar: Calendar = Calendar(identifier: .gregorian))
+                              calendar: Calendar = Calendar(identifier: .iso8601))
                               throws -> WorkoutEntity? {
         let dayStart = calendar.startOfDay(for: now)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
         let descriptor = FetchDescriptor<WorkoutEntity>(
             predicate: #Predicate {
                 $0.scheduledFor >= dayStart && $0.scheduledFor < dayEnd
+                    && $0.status != "superseded"
             },
             sortBy: [SortDescriptor(\.scheduledFor, order: .forward)]
         )
@@ -34,12 +35,28 @@ public final class WorkoutRepository {
         try ctx.save()
     }
 
-    /// Returns the most recently scheduled Workout, regardless of date.
+    /// Returns the most recently scheduled Workout, excluding superseded rows.
     public func latestWorkout() throws -> WorkoutEntity? {
         var descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.status != "superseded" },
             sortBy: [SortDescriptor(\.scheduledFor, order: .reverse)]
         )
         descriptor.fetchLimit = 1
+        return try modelContainer.mainContext.fetch(descriptor).first
+    }
+
+    public func workoutForDate(_ date: Date,
+                               calendar: Calendar = Calendar(identifier: .iso8601))
+                               throws -> WorkoutEntity? {
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+        let descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate {
+                $0.scheduledFor >= dayStart && $0.scheduledFor < dayEnd
+                    && $0.status != "superseded"
+            },
+            sortBy: [SortDescriptor(\.scheduledFor, order: .reverse)]
+        )
         return try modelContainer.mainContext.fetch(descriptor).first
     }
 

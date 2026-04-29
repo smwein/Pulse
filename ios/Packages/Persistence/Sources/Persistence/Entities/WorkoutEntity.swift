@@ -11,7 +11,7 @@ public final class WorkoutEntity {
     public var subtitle: String
     public var workoutType: String
     public var durationMin: Int
-    public var status: String       // "scheduled" | "in_progress" | "completed" | "skipped"
+    public var status: String       // "scheduled" | "in_progress" | "completed" | "superseded"
     @Attribute(.externalStorage) public var blocksJSON: Data
     @Attribute(.externalStorage) public var exercisesJSON: Data
     @Attribute(.externalStorage) public var whispersJSON: Data?

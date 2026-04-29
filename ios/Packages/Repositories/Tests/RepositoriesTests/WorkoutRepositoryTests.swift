@@ -112,4 +112,46 @@ final class WorkoutRepositoryTests: XCTestCase {
         XCTAssertEqual(try repo.workoutForID(id)?.title, "Find me")
         XCTAssertNil(try repo.workoutForID(UUID()))
     }
+
+    @MainActor
+    func test_latestWorkout_filtersSuperseded() throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let oldDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let newDate = Date(timeIntervalSince1970: 1_730_000_000)
+        ctx.insert(WorkoutEntity(id: UUID(), planID: UUID(), scheduledFor: oldDate,
+            title: "Keep", subtitle: "", workoutType: "Strength",
+            durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        ctx.insert(WorkoutEntity(id: UUID(), planID: UUID(), scheduledFor: newDate,
+            title: "Hide", subtitle: "", workoutType: "Strength",
+            durationMin: 30, status: "superseded",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        try ctx.save()
+        let repo = WorkoutRepository(modelContainer: container)
+        let latest = try repo.latestWorkout()
+        XCTAssertEqual(latest?.title, "Keep")
+    }
+
+    @MainActor
+    func test_workoutForDate_filtersSupersededAndPicksLatestNonSupersedeed() throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        var iso = Calendar(identifier: .iso8601)
+        iso.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = iso.startOfDay(for: Date(timeIntervalSince1970: 1_730_000_000))
+        let earlier = day.addingTimeInterval(3_600)
+        let later   = day.addingTimeInterval(7_200)
+        ctx.insert(WorkoutEntity(id: UUID(), planID: UUID(), scheduledFor: earlier,
+            title: "Old", subtitle: "", workoutType: "Strength",
+            durationMin: 30, status: "superseded",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        ctx.insert(WorkoutEntity(id: UUID(), planID: UUID(), scheduledFor: later,
+            title: "New", subtitle: "", workoutType: "Strength",
+            durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        try ctx.save()
+        let repo = WorkoutRepository(modelContainer: container)
+        XCTAssertEqual(try repo.workoutForDate(day)?.title, "New")
+    }
 }
