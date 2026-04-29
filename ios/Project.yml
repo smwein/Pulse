@@ -50,6 +50,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: co.simpleav.pulse
         INFOPLIST_FILE: PulseApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PulseApp/PulseApp.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_PREVIEWS: YES

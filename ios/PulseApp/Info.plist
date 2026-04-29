@@ -20,6 +20,8 @@
   <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
+  <key>NSHealthShareUsageDescription</key>
+  <string>Pulse uses recent activity, heart-rate, and sleep summaries to personalize your workouts and adapt them after each session.</string>
   <key>UIApplicationSceneManifest</key>
   <dict>
     <key>UIApplicationSupportsMultipleScenes</key>
