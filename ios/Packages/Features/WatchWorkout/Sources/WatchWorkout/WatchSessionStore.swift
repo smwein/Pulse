@@ -53,4 +53,21 @@ public final class WatchSessionStore {
         self.payload = payload
         self.state = .ready
     }
+
+    public func start() async throws {
+        guard let payload else { return }
+        state = .starting
+        do {
+            let uuid = try await factory.startSession(activityKind: payload.activityKind)
+            watchSessionUUID = uuid
+            state = .active
+            try await transport.send(.sessionLifecycle(.started(watchSessionUUID: uuid)),
+                                     via: .live)
+        } catch {
+            state = .failed(reason: .sessionStartFailed)
+            try? await transport.send(.sessionLifecycle(.failed(reason: .sessionStartFailed)),
+                                      via: .live)
+            throw error
+        }
+    }
 }
