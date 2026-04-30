@@ -4,6 +4,8 @@ import Repositories
 import Home
 import WorkoutDetail
 import PlanGeneration
+import InWorkout
+import Complete
 import CoreModels
 import HealthKitClient
 
@@ -12,6 +14,8 @@ public struct RootScaffold<DebugContent: View>: View {
     @State private var selectedWorkoutID: UUID?
     @State private var regeneratePresentedFor: Profile?
     @State private var regenerateSummaries: SevenDayHealthSummary?
+    @State private var inWorkoutFor: UUID?
+    @State private var completeForSessionID: UUID?
     private let appContainer: AppContainer
     private let themeStore: ThemeStore
     private let debugContent: () -> DebugContent
@@ -73,12 +77,19 @@ public struct RootScaffold<DebugContent: View>: View {
                     assetRepo: ExerciseAssetRepository(
                         modelContainer: appContainer.modelContainer,
                         manifestURL: appContainer.manifestURL
-                    )
+                    ),
+                    onStart: { wid in inWorkoutFor = wid }
                 )
             }
         }
         .fullScreenCover(item: $regeneratePresentedFor) { profile in
             regenerateScreen(profile: profile)
+        }
+        .fullScreenCover(item: $inWorkoutFor) { wid in
+            inWorkoutScreen(workoutID: wid)
+        }
+        .fullScreenCover(item: $completeForSessionID) { sid in
+            completeScreen(sessionID: sid)
         }
         #else
         NavigationStack {
@@ -95,7 +106,8 @@ public struct RootScaffold<DebugContent: View>: View {
                     assetRepo: ExerciseAssetRepository(
                         modelContainer: appContainer.modelContainer,
                         manifestURL: appContainer.manifestURL
-                    )
+                    ),
+                    onStart: { wid in inWorkoutFor = wid }
                 )
             }
         }
@@ -157,4 +169,42 @@ public struct RootScaffold<DebugContent: View>: View {
 private struct PersistedRegenHandle: WorkoutHandle {
     let id: UUID
     let title: String
+}
+
+extension RootScaffold {
+    @ViewBuilder
+    fileprivate func inWorkoutScreen(workoutID: UUID) -> some View {
+        let workoutRepo = WorkoutRepository(modelContainer: appContainer.modelContainer)
+        let workout = (try? workoutRepo.workoutForID(workoutID)) ?? nil
+        let flat: [SessionStore.FlatEntry] =
+            workout.map { SessionStore.flatten(workout: $0) } ?? []
+        InWorkoutView(
+            workoutID: workoutID,
+            modelContainer: appContainer.modelContainer,
+            flat: flat,
+            onComplete: { sid in
+                inWorkoutFor = nil
+                completeForSessionID = sid
+            },
+            onDiscard: { inWorkoutFor = nil })
+    }
+
+    @ViewBuilder
+    fileprivate func completeScreen(sessionID: UUID) -> some View {
+        let profileRepo = ProfileRepository(modelContainer: appContainer.modelContainer)
+        if let profile = profileRepo.currentProfile(),
+           let coach = Coach.byID(profile.activeCoachID) {
+            CompleteView(sessionID: sessionID,
+                         modelContainer: appContainer.modelContainer,
+                         api: appContainer.api,
+                         healthKit: appContainer.healthKit,
+                         manifestURL: appContainer.manifestURL,
+                         coach: coach,
+                         profile: profile,
+                         onDismiss: {
+                             completeForSessionID = nil
+                             selectedWorkoutID = nil
+                         })
+        }
+    }
 }
