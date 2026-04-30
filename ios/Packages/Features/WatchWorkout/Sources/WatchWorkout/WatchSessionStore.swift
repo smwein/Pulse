@@ -1,0 +1,41 @@
+import Foundation
+import Observation
+import WatchBridge
+import Logging
+
+public enum WatchSessionState: Equatable, Sendable {
+    case idle
+    case ready             // payload received, session not started
+    case starting          // HKWorkoutSession start in flight
+    case active            // session active, awaiting set confirmations
+    case resting(setNum: Int, exerciseID: String)
+    case ended
+    case failed(reason: LifecycleEvent.FailureReason)
+}
+
+/// Indirection so tests don't need a real HKWorkoutSession.
+public protocol WorkoutSessionFactory: Sendable {
+    func startSession(activityKind: String) async throws -> UUID
+    func endSession() async throws
+    func recoverIfActive() async -> UUID?
+}
+
+@MainActor
+@Observable
+public final class WatchSessionStore {
+    public private(set) var state: WatchSessionState = .idle
+    public private(set) var payload: WorkoutPayloadDTO?
+    public private(set) var watchSessionUUID: UUID?
+
+    private let transport: any WatchSessionTransport
+    private let outbox: SetLogOutbox
+    private let factory: WorkoutSessionFactory
+
+    public init(transport: any WatchSessionTransport,
+                outbox: SetLogOutbox,
+                sessionFactory: WorkoutSessionFactory) {
+        self.transport = transport
+        self.outbox = outbox
+        self.factory = sessionFactory
+    }
+}
