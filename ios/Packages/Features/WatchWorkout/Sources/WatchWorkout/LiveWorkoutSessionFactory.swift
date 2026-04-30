@@ -25,19 +25,22 @@ public final class LiveWorkoutSessionFactory: WorkoutSessionFactory, @unchecked 
         let s = try HKWorkoutSession(healthStore: store, configuration: cfg)
         let b = s.associatedWorkoutBuilder()
         b.dataSource = HKLiveWorkoutDataSource(healthStore: store, workoutConfiguration: cfg)
-        try await s.startActivity(with: Date())
-        try await b.beginCollection(withStart: Date())
+        // HKWorkoutSession exposes no public UUID — generate our own correlation
+        // token for the Phone-side mirrored session.
+        let uuid = UUID()
+        s.startActivity(with: Date())  // non-throwing, void
+        try await b.beginCollection(at: Date())
         // Companion mirroring — Phone receives lifecycle + builder data.
         try? await s.startMirroringToCompanionDevice()
         self.session = s
         self.builder = b
-        return s.uuid
+        return uuid
     }
 
     public func endSession() async throws {
         guard let s = session, let b = builder else { return }
         s.end()
-        try await b.endCollection(withEnd: Date())
+        try await b.endCollection(at: Date())
         _ = try await b.finishWorkout()  // writes HKWorkout
         self.session = nil
         self.builder = nil
