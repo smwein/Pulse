@@ -32,6 +32,22 @@ public final class WatchSessionStore {
     private let factory: WorkoutSessionFactory
     private let payloadStorage: PayloadFileStorage
 
+    private var loggedSetCounts: [String: Int] = [:]  // exerciseID → count
+
+    public var currentExerciseID: String? {
+        guard let payload else { return nil }
+        for ex in payload.exercises {
+            let logged = loggedSetCounts[ex.exerciseID] ?? 0
+            if logged < ex.sets.count { return ex.exerciseID }
+        }
+        return nil
+    }
+
+    public var currentSetNum: Int? {
+        guard let id = currentExerciseID else { return nil }
+        return (loggedSetCounts[id] ?? 0) + 1
+    }
+
     public init(transport: any WatchSessionTransport,
                 outbox: SetLogOutbox,
                 sessionFactory: WorkoutSessionFactory,
@@ -68,6 +84,29 @@ public final class WatchSessionStore {
             try? await transport.send(.sessionLifecycle(.failed(reason: .sessionStartFailed)),
                                       via: .live)
             throw error
+        }
+    }
+
+    public func confirmCurrentSet() async {
+        guard let exID = currentExerciseID, let setNum = currentSetNum,
+              let payload, let ex = payload.exercises.first(where: { $0.exerciseID == exID }),
+              let prescription = ex.sets.first(where: { $0.setNum == setNum })
+        else { return }
+        let log = SetLogDTO(sessionID: payload.sessionID, exerciseID: exID, setNum: setNum,
+                            reps: prescription.prescribedReps, load: prescription.prescribedLoad,
+                            rpe: nil, loggedAt: Date())
+        do { try outbox.enqueue(log) } catch {
+            PulseLogger.session.error("outbox enqueue failed", error)
+        }
+        try? await transport.send(.setLog(log), via: .reliable)
+        loggedSetCounts[exID, default: 0] += 1
+
+        // Transition to rest unless this was the last set of the workout.
+        if currentExerciseID == nil {
+            // last set logged — caller should call endSession()
+            state = .ended
+        } else {
+            state = .resting(setNum: setNum, exerciseID: exID)
         }
     }
 }

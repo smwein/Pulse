@@ -76,6 +76,38 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertEqual(sent[0].message, .sessionLifecycle(.failed(reason: .sessionStartFailed)))
     }
 
+    func test_currentExercise_andSetNum_advanceWithLogs() async throws {
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k",
+            exercises: [
+                .init(exerciseID: "row", name: "Row", sets: [
+                    .init(setNum: 1, prescribedReps: 8, prescribedLoad: "100"),
+                    .init(setNum: 2, prescribedReps: 8, prescribedLoad: "100")
+                ]),
+                .init(exerciseID: "press", name: "Press", sets: [
+                    .init(setNum: 1, prescribedReps: 5, prescribedLoad: "60")
+                ])
+            ])
+        let dir = tempDir()
+        let store = WatchSessionStore(transport: FakeTransport(),
+                                      outbox: SetLogOutbox(directory: dir),
+                                      sessionFactory: FakeWorkoutSessionFactory(),
+                                      payloadStorage: PayloadFileStorage(directory: dir))
+        await store.receivePayload(payload)
+        try await store.start()
+
+        XCTAssertEqual(store.currentExerciseID, "row")
+        XCTAssertEqual(store.currentSetNum, 1)
+
+        await store.confirmCurrentSet()  // advances
+        XCTAssertEqual(store.currentExerciseID, "row")
+        XCTAssertEqual(store.currentSetNum, 2)
+
+        await store.confirmCurrentSet()  // advances to next exercise
+        XCTAssertEqual(store.currentExerciseID, "press")
+        XCTAssertEqual(store.currentSetNum, 1)
+    }
+
     private func tempDir() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("store-\(UUID())")
