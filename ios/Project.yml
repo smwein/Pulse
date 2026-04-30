@@ -45,6 +45,8 @@ packages:
     path: Packages/Logging
   WatchBridge:
     path: Packages/WatchBridge
+  WatchWorkout:
+    path: Packages/Features/WatchWorkout
 targets:
   PulseApp:
     type: application
