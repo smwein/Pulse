@@ -41,6 +41,8 @@ packages:
     path: Packages/Features/InWorkout
   Complete:
     path: Packages/Features/Complete
+  Logging:
+    path: Packages/Logging
 targets:
   PulseApp:
     type: application
