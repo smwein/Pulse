@@ -89,7 +89,8 @@ final class WatchSessionStoreTests: XCTestCase {
                 ])
             ])
         let dir = tempDir()
-        let store = WatchSessionStore(transport: FakeTransport(),
+        let transport = FakeTransport()
+        let store = WatchSessionStore(transport: transport,
                                       outbox: SetLogOutbox(directory: dir),
                                       sessionFactory: FakeWorkoutSessionFactory(),
                                       payloadStorage: PayloadFileStorage(directory: dir))
@@ -106,6 +107,15 @@ final class WatchSessionStoreTests: XCTestCase {
         await store.confirmCurrentSet()  // advances to next exercise
         XCTAssertEqual(store.currentExerciseID, "press")
         XCTAssertEqual(store.currentSetNum, 1)
+
+        await store.confirmCurrentSet()  // last set of "press"
+
+        let pendingFinal = try SetLogOutbox(directory: dir).pending()
+        XCTAssertEqual(pendingFinal.count, 3)
+        let sent = await transport.sent
+        let setLogSends = sent.filter { if case .setLog = $0.message { return true } else { return false } }
+        XCTAssertEqual(setLogSends.count, 3)
+        XCTAssertTrue(setLogSends.allSatisfy { $0.channel == .reliable })
     }
 
     private func tempDir() -> URL {
