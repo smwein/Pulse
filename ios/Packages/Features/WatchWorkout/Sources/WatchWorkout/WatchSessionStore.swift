@@ -109,8 +109,10 @@ public final class WatchSessionStore {
         do { try outbox.enqueue(log) } catch {
             PulseLogger.session.error("outbox enqueue failed", error)
         }
-        try? await transport.send(.setLog(log), via: .reliable)
+        // Bump counter before the wire send so a re-entrant tap during the await
+        // suspension can't double-log. Outbox is the source of truth either way.
         loggedSetCounts[exID, default: 0] += 1
+        try? await transport.send(.setLog(log), via: .reliable)
 
         // Transition to rest unless this was the last set of the workout.
         if currentExerciseID == nil {
