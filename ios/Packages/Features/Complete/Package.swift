@@ -9,6 +9,7 @@ let package = Package(
         .package(path: "../../CoreModels"),
         .package(path: "../../DesignSystem"),
         .package(path: "../../Persistence"),
+        .package(path: "../../Networking"),
         .package(path: "../../Repositories"),
         .package(path: "../../HealthKitClient"),
     ],
@@ -16,7 +17,7 @@ let package = Package(
         .target(
             name: "Complete",
             dependencies: ["CoreModels", "DesignSystem", "Persistence",
-                           "Repositories", "HealthKitClient"]
+                           "Networking", "Repositories", "HealthKitClient"]
         ),
         .testTarget(
             name: "CompleteTests",

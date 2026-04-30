@@ -3,7 +3,7 @@ import CoreModels
 import HealthKitClient
 import Persistence
 
-enum PromptBuilder {
+public enum PromptBuilder {
     static let planGenFraming: String = """
     You are {coachName}, {coachTagline}.
     You design adaptive workouts based on the user's profile and recent
@@ -155,7 +155,7 @@ enum PromptBuilder {
     workout. Use only catalog IDs from the list below.
     """
 
-    static func adaptationSystemPrompt(
+    public static func adaptationSystemPrompt(
         coach: Coach,
         availableExercises: [(id: String, name: String, equipment: [String])] = [],
         strictRetry: Bool = false
@@ -176,7 +176,7 @@ enum PromptBuilder {
         return s
     }
 
-    static func adaptationUserMessage(
+    public static func adaptationUserMessage(
         nextWorkout: WorkoutEntity,
         justCompletedTitle: String,
         justCompletedDurationSec: Int,
