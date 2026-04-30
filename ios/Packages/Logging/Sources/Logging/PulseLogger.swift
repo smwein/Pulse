@@ -1,4 +1,3 @@
-import Foundation
 import os
 
 /// Thin wrapper over `os.Logger` with pre-built category loggers.
