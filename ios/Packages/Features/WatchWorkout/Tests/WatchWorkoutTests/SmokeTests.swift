@@ -27,4 +27,12 @@ final class WatchWorkoutSmokeTests: XCTestCase {
     func test_restView_renders() {
         _ = RestView(secondsRemaining: 60, onSkip: {}).body
     }
+
+    @MainActor func test_watchAppRoot_renders() async {
+        let store = WatchSessionStore(transport: FakeTransport(),
+            outbox: SetLogOutbox(directory: FileManager.default.temporaryDirectory),
+            sessionFactory: FakeWorkoutSessionFactory(),
+            payloadStorage: PayloadFileStorage(directory: FileManager.default.temporaryDirectory))
+        _ = WatchAppRoot(store: store).body
+    }
 }
