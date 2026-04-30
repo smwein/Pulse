@@ -23,4 +23,8 @@ final class WatchWorkoutSmokeTests: XCTestCase {
                               onConfirm: {})
         _ = v.body
     }
+
+    func test_restView_renders() {
+        _ = RestView(secondsRemaining: 60, onSkip: {}).body
+    }
 }
