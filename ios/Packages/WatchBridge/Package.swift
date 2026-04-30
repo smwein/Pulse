@@ -8,14 +8,12 @@ let package = Package(
         .library(name: "WatchBridge", targets: ["WatchBridge"])
     ],
     dependencies: [
-        .package(name: "Logging", path: "../Logging"),
-        .package(name: "CoreModels", path: "../CoreModels")
+        .package(name: "Logging", path: "../Logging")
     ],
     targets: [
         .target(name: "WatchBridge",
                 dependencies: [
-                    .product(name: "Logging", package: "Logging"),
-                    .product(name: "CoreModels", package: "CoreModels")
+                    .product(name: "Logging", package: "Logging")
                 ],
                 path: "Sources/WatchBridge"),
         .testTarget(name: "WatchBridgeTests",
