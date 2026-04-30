@@ -43,6 +43,8 @@ packages:
     path: Packages/Features/Complete
   Logging:
     path: Packages/Logging
+  WatchBridge:
+    path: Packages/WatchBridge
 targets:
   PulseApp:
     type: application
