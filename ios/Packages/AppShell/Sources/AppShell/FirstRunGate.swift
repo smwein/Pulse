@@ -100,6 +100,11 @@ public struct FirstRunGate<Content: View>: View {
             }
             self.isCheckingFirstRun = false
         }
+        // Plan 4: clean up any orphan in-progress sessions from a prior crash.
+        let sessionRepo = SessionRepository(modelContainer: appContainer.modelContainer)
+        if let orphan = try? sessionRepo.orphanedInProgressSession() {
+            try? sessionRepo.discardSession(id: orphan.id)
+        }
         // Best-effort: refresh exercise asset manifest in the background.
         let assetRepo = ExerciseAssetRepository(
             modelContainer: appContainer.modelContainer,
