@@ -39,6 +39,8 @@ packages:
     path: Packages/HealthKitClient
   InWorkout:
     path: Packages/Features/InWorkout
+  Complete:
+    path: Packages/Features/Complete
 targets:
   PulseApp:
     type: application
@@ -70,3 +72,4 @@ targets:
       - package: WorkoutDetail
       - package: HealthKitClient
       - package: InWorkout
+      - package: Complete
