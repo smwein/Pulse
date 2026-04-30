@@ -16,4 +16,11 @@ final class WatchWorkoutSmokeTests: XCTestCase {
         _ = withPayload.body
         _ = waiting.body
     }
+
+    func test_activeSetView_renders() {
+        let v = ActiveSetView(exerciseName: "Row", setNum: 1, totalSets: 3,
+                              prescribedReps: 8, prescribedLoad: "100",
+                              onConfirm: {})
+        _ = v.body
+    }
 }
