@@ -7,15 +7,18 @@ import Repositories
 public struct WorkoutDetailView: View {
     @State private var store: WorkoutDetailStore
     @State private var selectedExercise: PlannedExercise?
+    private let onStart: ((UUID) -> Void)?
 
     public init(workoutID: UUID,
                 modelContainer: ModelContainer,
-                assetRepo: ExerciseAssetRepository) {
+                assetRepo: ExerciseAssetRepository,
+                onStart: ((UUID) -> Void)? = nil) {
         _store = State(initialValue: WorkoutDetailStore(
             workoutID: workoutID,
             modelContainer: modelContainer,
             assetRepo: assetRepo
         ))
+        self.onStart = onStart
     }
 
     public var body: some View {
@@ -67,12 +70,16 @@ public struct WorkoutDetailView: View {
 
     private var startCTA: some View {
         VStack(alignment: .leading, spacing: PulseSpacing.xs) {
-            PulseButton("Start workout", variant: .primary, action: {})
-                .disabled(true)
-                .opacity(0.5)
-            Text("Coming in the next update")
-                .pulseFont(.small)
-                .foregroundStyle(PulseColors.ink2.color)
+            PulseButton("Start workout", variant: .primary) {
+                onStart?(store.workoutID)
+            }
+            .disabled(onStart == nil)
+            .opacity(onStart == nil ? 0.5 : 1)
+            if onStart == nil {
+                Text("Coming in the next update")
+                    .pulseFont(.small)
+                    .foregroundStyle(PulseColors.ink2.color)
+            }
         }
     }
 }

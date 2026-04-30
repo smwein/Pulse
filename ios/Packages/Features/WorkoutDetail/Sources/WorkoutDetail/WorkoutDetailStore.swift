@@ -16,7 +16,7 @@ public final class WorkoutDetailStore {
     public private(set) var why: String?
     public private(set) var blocks: [WorkoutBlock] = []
 
-    private let workoutID: UUID
+    public let workoutID: UUID
     private let modelContainer: ModelContainer
     private let assetRepo: ExerciseAssetRepository
     private var assetsByID: [String: ExerciseAssetEntity] = [:]
