@@ -170,6 +170,6 @@ private struct FlowLayout: Layout {
     }
 }
 
-extension WorkoutFeedback.Mood: CaseIterable {
+extension WorkoutFeedback.Mood: @retroactive CaseIterable {
     public static let allCases: [WorkoutFeedback.Mood] = [.great, .good, .ok, .rough]
 }
