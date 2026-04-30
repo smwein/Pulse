@@ -10,11 +10,13 @@ let package = Package(
         .package(path: "../Persistence"),
         .package(path: "../Networking"),
         .package(path: "../HealthKitClient"),
+        .package(name: "Logging", path: "../Logging"),
     ],
     targets: [
         .target(
             name: "Repositories",
-            dependencies: ["CoreModels", "Persistence", "Networking", "HealthKitClient"]
+            dependencies: ["CoreModels", "Persistence", "Networking", "HealthKitClient",
+                           .product(name: "Logging", package: "Logging")]
         ),
         .testTarget(
             name: "RepositoriesTests",

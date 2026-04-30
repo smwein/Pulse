@@ -4,6 +4,7 @@ import CoreModels
 import Networking
 import Persistence
 import HealthKitClient
+import Logging
 
 @MainActor
 public final class PlanRepository {
@@ -146,7 +147,7 @@ public final class PlanRepository {
                 try ctx.save()
             }
         } catch {
-            // best-effort cleanup
+            PulseLogger.repo.error("regenerate: best-effort prior-plan cleanup failed", error)
         }
         return streamFirstPlan(profile: profile, coach: coach, now: now, summaries: summaries)
     }
