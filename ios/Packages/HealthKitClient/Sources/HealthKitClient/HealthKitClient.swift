@@ -121,15 +121,18 @@ public struct HealthKitClient: Sendable {
 }
 
 public extension HealthKitClient {
+    #if canImport(HealthKit)
+    private static let writeTypes: [HKSampleType] = [
+        HKObjectType.workoutType(),
+        HKQuantityType(.activeEnergyBurned),
+        HKQuantityType(.heartRate),
+    ]
+    #endif
+
     func requestWriteAuthorization() async throws {
         #if canImport(HealthKit)
         guard let store else { return }
-        let share: Set<HKSampleType> = [
-            HKObjectType.workoutType(),
-            HKQuantityType(.activeEnergyBurned),
-            HKQuantityType(.heartRate),
-        ]
-        try await store.requestAuthorization(toShare: share, read: nil)
+        try await store.requestAuthorization(toShare: Set(Self.writeTypes), read: nil)
         #endif
     }
 
@@ -138,12 +141,7 @@ public extension HealthKitClient {
     func writeAuthorizationStatus() -> WriteAuthStatus {
         #if canImport(HealthKit)
         guard let store = store as? HKHealthStore else { return .undetermined }
-        let types: [HKSampleType] = [
-            HKObjectType.workoutType(),
-            HKQuantityType(.activeEnergyBurned),
-            HKQuantityType(.heartRate),
-        ]
-        let statuses = types.map { store.authorizationStatus(for: $0) }
+        let statuses = Self.writeTypes.map { store.authorizationStatus(for: $0) }
         if statuses.allSatisfy({ $0 == .sharingAuthorized }) { return .authorized }
         if statuses.contains(.sharingDenied) { return .denied }
         return .undetermined
