@@ -31,6 +31,8 @@ public final class PlanGenStore {
 
     private let streamProvider: StreamProvider
     private let onPersistedWorkout: OnPersistedWorkout
+    private var hasStarted = false
+    private var isRunning = false
     private static let maxVisibleLines = 6
 
     public init(coach: Coach,
@@ -44,10 +46,18 @@ public final class PlanGenStore {
     }
 
     public func run(profile: Profile) async {
+        guard !hasStarted, !isRunning else { return }
+        hasStarted = true
+        isRunning = true
+        defer { isRunning = false }
         await runAttempt(profile: profile, attempt: 1)
     }
 
     public func retry(profile: Profile) async {
+        guard !isRunning else { return }
+        hasStarted = true
+        isRunning = true
+        defer { isRunning = false }
         state = .streaming(checkpoints: [], text: "", attempt: 1)
         await runAttempt(profile: profile, attempt: 1)
     }

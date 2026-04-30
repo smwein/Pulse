@@ -51,7 +51,7 @@ final class PlanRepositoryTests: XCTestCase {
     }
 
     @MainActor
-    func test_regenerate_deletesPriorLatestWorkoutBeforeStreaming() async throws {
+    func test_regenerate_deletesUnreferencedPriorWorkoutBeforeStreaming() async throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext
         let planID = UUID()
@@ -83,7 +83,7 @@ final class PlanRepositoryTests: XCTestCase {
     }
 
     @MainActor
-    func test_regenerate_cascadeDeletesPriorPlanAndAllItsWorkouts() async throws {
+    func test_regenerate_deletesPriorPlanWhenAllWorkoutsAreUnreferenced() async throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext
         let priorPlanID = UUID()
@@ -117,6 +117,44 @@ final class PlanRepositoryTests: XCTestCase {
         let remainingPlans = try ctx.fetch(FetchDescriptor<PlanEntity>(
             predicate: #Predicate { $0.id == priorPlan }))
         XCTAssertTrue(remainingPlans.isEmpty)
+    }
+
+    @MainActor
+    func test_regenerate_retainsPriorWorkoutAndPlanWhenSessionReferencesWorkout() async throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let priorPlanID = UUID()
+        let priorWorkoutID = UUID()
+        ctx.insert(PlanEntity(id: priorPlanID,
+            weekStart: Date(timeIntervalSince1970: 1_700_000_000),
+            generatedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            modelUsed: "claude-opus-4-7", promptTokens: 10, completionTokens: 10,
+            payloadJSON: Data("{}".utf8)))
+        ctx.insert(WorkoutEntity(id: priorWorkoutID, planID: priorPlanID,
+            scheduledFor: Date(timeIntervalSince1970: 1_700_000_000),
+            title: "Historical", subtitle: "", workoutType: "Strength", durationMin: 30,
+            status: "completed",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8)))
+        ctx.insert(SessionEntity(id: UUID(), workoutID: priorWorkoutID,
+                                 startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+                                 completedAt: Date(timeIntervalSince1970: 1_700_000_100)))
+        try ctx.save()
+
+        let repo = PlanRepository.makeForTests(modelContainer: container)
+        let stream = repo.regenerate(profile: ProfileRepositoryTests.fixtureProfile(),
+                                     coach: Coach.byID("rex")!)
+        let task = Task { for try await _ in stream {} }
+        task.cancel()
+        _ = try? await task.value
+
+        let workoutID = priorWorkoutID
+        let remainingWorkouts = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate { $0.id == workoutID }))
+        XCTAssertEqual(remainingWorkouts.count, 1)
+        let planID = priorPlanID
+        let remainingPlans = try ctx.fetch(FetchDescriptor<PlanEntity>(
+            predicate: #Predicate { $0.id == planID }))
+        XCTAssertEqual(remainingPlans.count, 1)
     }
 
     @MainActor

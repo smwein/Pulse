@@ -126,6 +126,30 @@ final class PlanGenStoreTests: XCTestCase {
         }
     }
 
+    func test_run_isIdempotentAfterFirstStart() async {
+        var calls = 0
+        let plan = samplePlan()
+        let store = PlanGenStore(
+            coach: Coach.byID("rex")!,
+            mode: .firstPlan,
+            streamProvider: { _ in
+                calls += 1
+                return self.fakeStream(yields: [
+                    .done(plan, insertedWorkoutIDs: [UUID()], modelUsed: "claude-opus-4-7",
+                          promptTokens: 100, completionTokens: 200),
+                ])
+            },
+            onPersistedWorkout: { p, ids in
+                ids.first.map { MockWorkoutHandle(id: $0, title: p.workouts.first!.title) }
+            }
+        )
+
+        await store.run(profile: makeProfile())
+        await store.run(profile: makeProfile())
+
+        XCTAssertEqual(calls, 1)
+    }
+
     func test_streamFails_attempt2_transitionsToFailed() async {
         let store = PlanGenStore(
             coach: Coach.byID("rex")!,

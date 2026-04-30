@@ -148,10 +148,9 @@ public struct RootScaffold<DebugContent: View>: View {
                 mode: .regenerate,
                 streamProvider: { p in planRepo.regenerate(profile: p, coach: coach,
                                                            summaries: regenerateSummaries) },
-                onPersistedWorkout: { _, ids in
+                onPersistedWorkout: { plan, ids in
                     if let id = ids.first {
-                        let repo = WorkoutRepository(modelContainer: appContainer.modelContainer)
-                        let title = (try? repo.latestWorkout())?.title ?? "Today's workout"
+                        let title = plan.workouts.first?.title ?? "Today's workout"
                         return PersistedRegenHandle(id: id, title: title)
                     }
                     return nil

@@ -77,10 +77,9 @@ public struct FirstRunGate<Content: View>: View {
                 mode: .firstPlan,
                 streamProvider: { p in self.planRepo.streamFirstPlan(profile: p, coach: coach,
                                                                      summaries: self.summaries) },
-                onPersistedWorkout: { _, ids in
+                onPersistedWorkout: { plan, ids in
                     if let id = ids.first {
-                        let repo = WorkoutRepository(modelContainer: self.appContainer.modelContainer)
-                        let title = (try? repo.latestWorkout())?.title ?? "Today's workout"
+                        let title = plan.workouts.first?.title ?? "Today's workout"
                         return PersistedWorkoutHandle(id: id, title: title)
                     }
                     return nil

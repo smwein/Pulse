@@ -128,9 +128,9 @@ public final class PlanRepository {
         return generatePlan(systemPrompt: system, userMessage: user, weekStart: weekStart)
     }
 
-    /// Same as `streamFirstPlan` but cascade-deletes the prior plan and all its
-    /// workouts first. Cleanup is best-effort; plan generation still streams even
-    /// if cleanup fails.
+    /// Same as `streamFirstPlan` but clears unreferenced rows from the prior
+    /// generated plan first. Workouts with session history are retained so
+    /// completed/in-progress sessions don't lose their workout context.
     public func regenerate(profile: Profile, coach: Coach,
                            now: Date = Date(),
                            summaries: SevenDayHealthSummary? = nil) -> AsyncThrowingStream<PlanStreamUpdate, Error> {
@@ -142,8 +142,20 @@ public final class PlanRepository {
                 let priorID = prior.id
                 let priorWorkouts = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
                     predicate: #Predicate { $0.planID == priorID }))
-                for w in priorWorkouts { ctx.delete(w) }
-                ctx.delete(prior)
+                var retainedWorkout = false
+                for w in priorWorkouts {
+                    let workoutID = w.id
+                    let sessions = try ctx.fetch(FetchDescriptor<SessionEntity>(
+                        predicate: #Predicate { $0.workoutID == workoutID }))
+                    if sessions.isEmpty {
+                        ctx.delete(w)
+                    } else {
+                        retainedWorkout = true
+                    }
+                }
+                if !retainedWorkout {
+                    ctx.delete(prior)
+                }
                 try ctx.save()
             }
         } catch {
