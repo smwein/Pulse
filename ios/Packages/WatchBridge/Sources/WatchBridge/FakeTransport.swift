@@ -12,6 +12,8 @@ public actor FakeTransport: WatchSessionTransport {
 
     public var isReachable: Bool { reachable }
 
+    // Single shared stream so simulateIncoming(_:) values aren't lost when a consumer attaches
+    // after the call. Trade-off: only one concurrent consumer is supported.
     private let _incoming: AsyncStream<WCMessage>
     private let _continuation: AsyncStream<WCMessage>.Continuation
 

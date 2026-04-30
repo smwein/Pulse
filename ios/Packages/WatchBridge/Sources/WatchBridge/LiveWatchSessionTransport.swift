@@ -4,6 +4,9 @@ import Logging
 import WatchConnectivity
 
 public actor LiveWatchSessionTransport: NSObject, WatchSessionTransport, WCSessionDelegate {
+    // Continuations are appended on every `incoming` access and never removed on consumer
+    // cancellation. Plan 5 attaches a single consumer for the app's lifetime; revisit if
+    // that ever changes (use AsyncStream.onTermination to self-prune).
     private var continuations: [AsyncStream<WCMessage>.Continuation] = []
     private let session: WCSession
 
