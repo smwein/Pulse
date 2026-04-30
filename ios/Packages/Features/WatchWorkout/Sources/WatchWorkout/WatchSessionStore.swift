@@ -87,6 +87,17 @@ public final class WatchSessionStore {
         }
     }
 
+    public func endSession() async throws {
+        do {
+            try await factory.endSession()
+        } catch {
+            PulseLogger.session.error("HKWorkoutSession.end failed", error)
+        }
+        state = .ended
+        try? payloadStorage.clear()
+        try? await transport.send(.sessionLifecycle(.ended), via: .live)
+    }
+
     public func confirmCurrentSet() async {
         guard let exID = currentExerciseID, let setNum = currentSetNum,
               let payload, let ex = payload.exercises.first(where: { $0.exerciseID == exID }),

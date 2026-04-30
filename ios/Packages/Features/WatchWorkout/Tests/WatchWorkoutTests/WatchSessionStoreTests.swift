@@ -118,6 +118,24 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertTrue(setLogSends.allSatisfy { $0.channel == .reliable })
     }
 
+    func test_endSession_callsFactoryAndEmitsLifecycle() async throws {
+        let transport = FakeTransport()
+        let factory = FakeWorkoutSessionFactory()
+        let dir = tempDir()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k", exercises: [])
+        let store = WatchSessionStore(transport: transport, outbox: SetLogOutbox(directory: dir),
+            sessionFactory: factory,
+            payloadStorage: PayloadFileStorage(directory: dir))
+        await store.receivePayload(payload)
+        try await store.start()
+        try await store.endSession()
+        XCTAssertTrue(factory.ended)
+        XCTAssertEqual(store.state, .ended)
+        let lastSent = await transport.sent.last
+        XCTAssertEqual(lastSent?.message, .sessionLifecycle(.ended))
+    }
+
     private func tempDir() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("store-\(UUID())")
