@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Pulse</string>
+    <key>UIDeviceFamily</key>
+    <array><integer>4</integer></array>
+    <key>WKApplication</key>
+    <true/>
+    <key>WKBackgroundModes</key>
+    <array><string>workout-processing</string></array>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Pulse uses your heart rate during workouts to power the live HR display and adapt your plan.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>Pulse saves completed workouts to Health so the AI can adapt your plan over time.</string>
+</dict>
+</plist>
