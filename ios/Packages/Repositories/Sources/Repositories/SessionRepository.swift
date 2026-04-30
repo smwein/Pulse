@@ -14,9 +14,14 @@ public final class SessionRepository {
     @discardableResult
     public func start(workoutID: UUID, now: Date = Date()) throws -> SessionEntity {
         let ctx = modelContainer.mainContext
+        let target = workoutID
+        if let existing = try ctx.fetch(FetchDescriptor<SessionEntity>(
+            predicate: #Predicate { $0.workoutID == target && $0.completedAt == nil }
+        )).first {
+            return existing
+        }
         var session: SessionEntity!
         try ctx.atomicWrite {
-            let target = workoutID
             let workouts = try ctx.fetch(FetchDescriptor<WorkoutEntity>(
                 predicate: #Predicate { $0.id == target }))
             guard let workout = workouts.first else {

@@ -87,11 +87,11 @@ public final class PlanRepository {
                                 throw APIClientError.decoding("no fenced ```json block in stream")
                             }
                             let plan = try JSONDecoder.pulse.decode(WorkoutPlan.self, from: data)
-                            let insertedIDs = try await persist(plan: plan, weekStart: weekStart,
-                                                                modelUsed: modelUsed,
-                                                                promptTokens: promptTokens,
-                                                                completionTokens: completionTokens,
-                                                                rawJSON: data)
+                            let insertedIDs = try persist(plan: plan, weekStart: weekStart,
+                                                          modelUsed: modelUsed,
+                                                          promptTokens: promptTokens,
+                                                          completionTokens: completionTokens,
+                                                          rawJSON: data)
                             continuation.yield(.done(plan, insertedWorkoutIDs: insertedIDs,
                                                      modelUsed: modelUsed,
                                                      promptTokens: promptTokens,

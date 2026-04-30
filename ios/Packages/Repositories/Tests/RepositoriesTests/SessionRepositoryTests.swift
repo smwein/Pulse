@@ -30,6 +30,18 @@ final class SessionRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func test_start_returnsExistingInProgressSessionForWorkout() throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let w = seedWorkout(ctx)
+        let repo = SessionRepository(modelContainer: container)
+        let first = try repo.start(workoutID: w.id)
+        let second = try repo.start(workoutID: w.id)
+        XCTAssertEqual(first.id, second.id)
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<SessionEntity>()).count, 1)
+    }
+
+    @MainActor
     func test_logSet_isIdempotentOnTriple() throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext

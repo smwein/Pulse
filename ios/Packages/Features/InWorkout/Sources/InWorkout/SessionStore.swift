@@ -9,7 +9,11 @@ import SwiftData
 @Observable
 public final class SessionStore {
     public enum Phase: Sendable { case work, rest }
-    public enum Lifecycle: Sendable { case completed(SessionEntity), discarded }
+    public enum Lifecycle: Sendable, Equatable {
+        case completed(UUID)
+        case discarded
+        case failed(String)
+    }
 
     public struct FlatEntry: Hashable, Sendable {
         public let blockLabel: String
@@ -73,8 +77,9 @@ public final class SessionStore {
             do {
                 let session = try repo.start(workoutID: workoutID)
                 sessionID = session.id
+                restoreProgress(from: session)
             } catch {
-                // Surface via lifecycle? For Plan 4, log + drop silently.
+                onLifecycle(.failed("Couldn't start this workout. Please try again."))
             }
         }
     }
@@ -115,13 +120,9 @@ public final class SessionStore {
     public func finish() async {
         if let sessionID, let repo {
             try? repo.finish(sessionID: sessionID)
-            let dummy = SessionEntity(id: sessionID, workoutID: workoutID,
-                                      startedAt: Date())
-            onLifecycle(.completed(dummy))
+            onLifecycle(.completed(sessionID))
         } else {
-            let dummy = SessionEntity(id: UUID(), workoutID: workoutID,
-                                      startedAt: Date())
-            onLifecycle(.completed(dummy))
+            onLifecycle(.completed(UUID()))
         }
     }
 
@@ -137,6 +138,21 @@ public final class SessionStore {
                           load: first.prescribedLoad, rpe: 0)
         }
         onLifecycle(.discarded)
+    }
+
+    private func restoreProgress(from session: SessionEntity) {
+        let logged = session.setLogs
+        guard !logged.isEmpty else { return }
+        let completedKeys = Set(logged.map { "\($0.exerciseID)#\($0.setNum)" })
+        if let nextIndex = flat.firstIndex(where: { !completedKeys.contains("\($0.exerciseID)#\($0.setNum)") }) {
+            idx = nextIndex
+            phase = .work
+            secs = 0
+            let next = flat[nextIndex]
+            draft = Draft(reps: next.prescribedReps, load: next.prescribedLoad, rpe: 0)
+        } else {
+            idx = max(flat.count - 1, 0)
+        }
     }
 }
 

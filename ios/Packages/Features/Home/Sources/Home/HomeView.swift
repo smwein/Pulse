@@ -7,15 +7,18 @@ import Repositories
 public struct HomeView: View {
     @State private var store: HomeStore
     private let onViewWorkout: (UUID) -> Void
+    private let onResumeWorkout: (UUID) -> Void
     private let onRegenerate: () -> Void
 
     public init(workoutRepo: WorkoutRepository,
                 profileRepo: ProfileRepository,
                 onViewWorkout: @escaping (UUID) -> Void,
+                onResumeWorkout: @escaping (UUID) -> Void = { _ in },
                 onRegenerate: @escaping () -> Void) {
         _store = State(initialValue: HomeStore(workoutRepo: workoutRepo,
                                                profileRepo: profileRepo))
         self.onViewWorkout = onViewWorkout
+        self.onResumeWorkout = onResumeWorkout
         self.onRegenerate = onRegenerate
     }
 
@@ -35,7 +38,13 @@ public struct HomeView: View {
                         workoutType: w.workoutType,
                         status: w.status,
                         actionLabel: store.workoutActionLabel
-                    ) { onViewWorkout(w.id) }
+                    ) {
+                        if w.status == "in_progress" {
+                            onResumeWorkout(w.id)
+                        } else {
+                            onViewWorkout(w.id)
+                        }
+                    }
                 } else {
                     PulseCard {
                         VStack(alignment: .leading, spacing: PulseSpacing.md) {

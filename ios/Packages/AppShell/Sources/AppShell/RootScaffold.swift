@@ -68,6 +68,7 @@ public struct RootScaffold<DebugContent: View>: View {
                 workoutRepo: WorkoutRepository(modelContainer: appContainer.modelContainer),
                 profileRepo: ProfileRepository(modelContainer: appContainer.modelContainer),
                 onViewWorkout: { id in selectedWorkoutID = id },
+                onResumeWorkout: { id in inWorkoutFor = id },
                 onRegenerate: { triggerRegenerate() }
             )
             .navigationDestination(item: $selectedWorkoutID) { id in
@@ -97,6 +98,7 @@ public struct RootScaffold<DebugContent: View>: View {
                 workoutRepo: WorkoutRepository(modelContainer: appContainer.modelContainer),
                 profileRepo: ProfileRepository(modelContainer: appContainer.modelContainer),
                 onViewWorkout: { id in selectedWorkoutID = id },
+                onResumeWorkout: { id in inWorkoutFor = id },
                 onRegenerate: { triggerRegenerate() }
             )
             .navigationDestination(item: $selectedWorkoutID) { id in

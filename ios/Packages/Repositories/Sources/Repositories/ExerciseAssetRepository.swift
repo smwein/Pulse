@@ -17,7 +17,7 @@ public final class ExerciseAssetRepository {
         self.fetcher = fetcher
     }
 
-    public static let urlSessionFetcher: DataFetcher = { url in
+    nonisolated public static let urlSessionFetcher: DataFetcher = { url in
         let (data, _) = try await URLSession.shared.data(from: url)
         return data
     }

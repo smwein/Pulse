@@ -14,6 +14,7 @@ public struct InWorkoutView: View {
     @State private var elapsedSec: Int = 0
     @State private var sessionStartTime: Date = Date()
     @State private var showDiscardAlert = false
+    @State private var errorMessage: String?
     @State private var showExerciseSheet: Bool = false
     @State private var sheetExercise: PlannedExercise?
     @State private var sheetAsset: ExerciseAssetEntity?
@@ -94,6 +95,14 @@ public struct InWorkoutView: View {
         } message: {
             Text("Your sets so far won't be saved.")
         }
+        .alert("Workout unavailable", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("Close") { onDiscard() }
+        } message: {
+            Text(errorMessage ?? "")
+        }
         .onAppear {
             #if canImport(UIKit)
             UIApplication.shared.isIdleTimerDisabled = true
@@ -136,10 +145,12 @@ public struct InWorkoutView: View {
         await store.start()
         store.onLifecycle = { [self] event in
             switch event {
-            case .completed(let session):
-                onComplete(session.id)
+            case .completed(let sessionID):
+                onComplete(sessionID)
             case .discarded:
                 break
+            case .failed(let message):
+                errorMessage = message
             }
         }
     }

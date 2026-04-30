@@ -1,6 +1,7 @@
 import XCTest
 import CoreModels
 import Persistence
+import Repositories
 import SwiftData
 @testable import InWorkout
 
@@ -56,6 +57,32 @@ final class SessionStoreTests: XCTestCase {
         store.onLifecycle = { event in if case .completed = event { completed = true } }
         await store.logCurrentSet()
         XCTAssertTrue(completed)
+    }
+
+    @MainActor
+    func test_start_restoresProgressFromExistingSession() async throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let workoutID = UUID()
+        let workout = WorkoutEntity(id: workoutID, planID: UUID(), scheduledFor: Date(),
+            title: "T", subtitle: "S", workoutType: "Strength", durationMin: 30,
+            status: "in_progress", blocksJSON: Data("[]".utf8),
+            exercisesJSON: Data("[]".utf8))
+        ctx.insert(workout)
+        let session = SessionEntity(id: UUID(), workoutID: workoutID, startedAt: Date())
+        ctx.insert(session)
+        ctx.insert(SetLogEntity(sessionID: session.id, exerciseID: "ex0",
+                                setNum: 1, reps: 8, load: "60kg", rpe: 7,
+                                loggedAt: Date(), session: session))
+        try ctx.save()
+
+        let store = SessionStore(workoutID: workoutID, flat: makeFlat(),
+                                 repo: SessionRepository(modelContainer: container))
+        await store.start()
+
+        XCTAssertEqual(store.sessionID, session.id)
+        XCTAssertEqual(store.idx, 1)
+        XCTAssertEqual(store.current?.setNum, 2)
     }
 
     @MainActor
