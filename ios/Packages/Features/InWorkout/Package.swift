@@ -1,0 +1,24 @@
+// swift-tools-version:5.9
+import PackageDescription
+
+let package = Package(
+    name: "InWorkout",
+    platforms: [.iOS(.v17), .macOS(.v14)],
+    products: [.library(name: "InWorkout", targets: ["InWorkout"])],
+    dependencies: [
+        .package(path: "../../CoreModels"),
+        .package(path: "../../DesignSystem"),
+        .package(path: "../../Persistence"),
+        .package(path: "../../Repositories"),
+    ],
+    targets: [
+        .target(
+            name: "InWorkout",
+            dependencies: ["CoreModels", "DesignSystem", "Persistence", "Repositories"]
+        ),
+        .testTarget(
+            name: "InWorkoutTests",
+            dependencies: ["InWorkout", "CoreModels", "Persistence", "Repositories"]
+        ),
+    ]
+)
