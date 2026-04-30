@@ -8,6 +8,8 @@ import Onboarding
 import Home
 import PlanGeneration
 import WorkoutDetail
+import InWorkout
+import Complete
 
 struct DebugFeatureSmokeView: View {
     let appContainer: AppContainer
@@ -20,12 +22,16 @@ struct DebugFeatureSmokeView: View {
         case planGen
         case home
         case workoutDetail(UUID)
+        case inWorkout(UUID)
+        case complete(UUID)
         var id: String {
             switch self {
             case .onboarding: return "onboarding"
             case .planGen: return "planGen"
             case .home: return "home"
             case .workoutDetail(let id): return "wd-\(id)"
+            case .inWorkout(let id):     return "iw-\(id)"
+            case .complete(let id):      return "cp-\(id)"
             }
         }
     }
@@ -48,6 +54,19 @@ struct DebugFeatureSmokeView: View {
                     seedWorkoutIfMissing()
                     if let w = (try? WorkoutRepository(modelContainer: appContainer.modelContainer).latestWorkout()) {
                         route = .workoutDetail(w.id)
+                    }
+                }
+                button("Run InWorkout (latest workout)") {
+                    seedProfileIfMissing()
+                    seedWorkoutIfMissing()
+                    if let w = (try? WorkoutRepository(modelContainer: appContainer.modelContainer).latestWorkout()) {
+                        route = .inWorkout(w.id)
+                    }
+                }
+                button("Run Complete (latest session)") {
+                    let ctx = appContainer.modelContainer.mainContext
+                    if let s = (try? ctx.fetch(FetchDescriptor<SessionEntity>()))?.first {
+                        route = .complete(s.id)
                     }
                 }
                 Divider()
@@ -88,6 +107,29 @@ struct DebugFeatureSmokeView: View {
                     manifestURL: appContainer.manifestURL
                 )
             )
+        case .inWorkout(let wid):
+            let workoutRepo = WorkoutRepository(modelContainer: appContainer.modelContainer)
+            let workout = (try? workoutRepo.workoutForID(wid)) ?? nil
+            let flat = workout.map { SessionStore.flatten(workout: $0) } ?? []
+            InWorkoutView(
+                workoutID: wid,
+                modelContainer: appContainer.modelContainer,
+                flat: flat,
+                onComplete: { sid in route = .complete(sid) },
+                onDiscard: { route = nil })
+        case .complete(let sid):
+            let profileRepo = ProfileRepository(modelContainer: appContainer.modelContainer)
+            if let p = profileRepo.currentProfile(),
+               let coach = Coach.byID(p.activeCoachID) {
+                CompleteView(sessionID: sid,
+                             modelContainer: appContainer.modelContainer,
+                             api: appContainer.api,
+                             healthKit: appContainer.healthKit,
+                             manifestURL: appContainer.manifestURL,
+                             coach: coach,
+                             profile: p,
+                             onDismiss: { route = nil })
+            }
         }
     }
 
