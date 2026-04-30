@@ -178,10 +178,14 @@ extension RootScaffold {
         let workout = (try? workoutRepo.workoutForID(workoutID)) ?? nil
         let flat: [SessionStore.FlatEntry] =
             workout.map { SessionStore.flatten(workout: $0) } ?? []
+        let assetRepo = ExerciseAssetRepository(
+            modelContainer: appContainer.modelContainer,
+            manifestURL: appContainer.manifestURL)
         InWorkoutView(
             workoutID: workoutID,
             modelContainer: appContainer.modelContainer,
             flat: flat,
+            assetRepo: assetRepo,
             onComplete: { sid in
                 inWorkoutFor = nil
                 completeForSessionID = sid

@@ -10,11 +10,13 @@ let package = Package(
         .package(path: "../../DesignSystem"),
         .package(path: "../../Persistence"),
         .package(path: "../../Repositories"),
+        .package(path: "../WorkoutDetail"),
     ],
     targets: [
         .target(
             name: "InWorkout",
-            dependencies: ["CoreModels", "DesignSystem", "Persistence", "Repositories"]
+            dependencies: ["CoreModels", "DesignSystem", "Persistence",
+                           "Repositories", "WorkoutDetail"]
         ),
         .testTarget(
             name: "InWorkoutTests",

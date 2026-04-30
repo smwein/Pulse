@@ -41,28 +41,31 @@ public final class CompleteStore {
 public extension CompleteStore {
     typealias AdaptationStreamer = @MainActor () -> AsyncThrowingStream<AdaptationStreamEvent, Error>
 
-    /// Submits feedback (idempotent), then streams adaptation. Retries once on
-    /// failure; on second failure, calls fallback.
+    /// Submits feedback (idempotent), then streams adaptation. If `rating == 0`
+    /// the feedback save is skipped (feedback is optional). Retries adaptation
+    /// once on failure; on second failure, calls fallback.
     @MainActor
     func runFlow(sessionID: UUID,
                  feedbackRepo: FeedbackRepository,
                  streamer: @escaping AdaptationStreamer,
                  fallback: @escaping @MainActor () -> Void,
                  nowProvider: @escaping () -> Date = Date.init) async {
-        let feedback = WorkoutFeedback(
-            sessionID: sessionID,
-            submittedAt: nowProvider(),
-            rating: feedbackDraft.rating,
-            intensity: feedbackDraft.intensity,
-            mood: feedbackDraft.mood,
-            tags: Array(feedbackDraft.tags),
-            exerciseRatings: feedbackDraft.exerciseRatings,
-            note: feedbackDraft.note.isEmpty ? nil : feedbackDraft.note)
-        do {
-            try feedbackRepo.saveFeedback(feedback)
-        } catch {
-            adaptation = .failed(error)
-            return
+        if feedbackDraft.rating > 0 {
+            let feedback = WorkoutFeedback(
+                sessionID: sessionID,
+                submittedAt: nowProvider(),
+                rating: feedbackDraft.rating,
+                intensity: feedbackDraft.intensity,
+                mood: feedbackDraft.mood,
+                tags: Array(feedbackDraft.tags),
+                exerciseRatings: feedbackDraft.exerciseRatings,
+                note: feedbackDraft.note.isEmpty ? nil : feedbackDraft.note)
+            do {
+                try feedbackRepo.saveFeedback(feedback)
+            } catch {
+                adaptation = .failed(error)
+                return
+            }
         }
         await goToAdaptationAndStream(streamer: streamer, fallback: fallback, attempt: 1)
     }

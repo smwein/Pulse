@@ -45,6 +45,21 @@ public final class WorkoutRepository {
         return try modelContainer.mainContext.fetch(descriptor).first
     }
 
+    /// Returns the next non-superseded scheduled Workout strictly after `after`.
+    /// Used by the adaptation flow to find what to replace, since the next
+    /// scheduled session isn't always literal-tomorrow.
+    public func nextScheduledWorkout(after: Date) throws -> WorkoutEntity? {
+        let cutoff = after
+        var descriptor = FetchDescriptor<WorkoutEntity>(
+            predicate: #Predicate {
+                $0.scheduledFor > cutoff && $0.status != "superseded"
+            },
+            sortBy: [SortDescriptor(\.scheduledFor, order: .forward)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContainer.mainContext.fetch(descriptor).first
+    }
+
     public func workoutForDate(_ date: Date,
                                calendar: Calendar = Calendar(identifier: .iso8601))
                                throws -> WorkoutEntity? {

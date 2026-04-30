@@ -111,10 +111,14 @@ struct DebugFeatureSmokeView: View {
             let workoutRepo = WorkoutRepository(modelContainer: appContainer.modelContainer)
             let workout = (try? workoutRepo.workoutForID(wid)) ?? nil
             let flat = workout.map { SessionStore.flatten(workout: $0) } ?? []
+            let assetRepo = ExerciseAssetRepository(
+                modelContainer: appContainer.modelContainer,
+                manifestURL: appContainer.manifestURL)
             InWorkoutView(
                 workoutID: wid,
                 modelContainer: appContainer.modelContainer,
                 flat: flat,
+                assetRepo: assetRepo,
                 onComplete: { sid in route = .complete(sid) },
                 onDiscard: { route = nil })
         case .complete(let sid):

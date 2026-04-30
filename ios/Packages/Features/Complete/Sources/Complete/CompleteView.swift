@@ -83,10 +83,11 @@ public struct CompleteView: View {
             firstFour = blocks.flatMap { $0.exercises }
                 .prefix(4).map { (id: $0.exerciseID, name: $0.name) }
         }
-        let nextDate = Calendar.current.date(byAdding: .day, value: 1,
-                                             to: workout?.scheduledFor ?? Date()) ?? Date()
+        // Find the next scheduled workout strictly after the just-completed one.
+        // Plans aren't always day-by-day; the next session may be 2+ days later.
         let workoutRepo = WorkoutRepository(modelContainer: modelContainer)
-        nextWorkout = try? workoutRepo.workoutForDate(nextDate)
+        nextWorkout = try? workoutRepo.nextScheduledWorkout(
+            after: workout?.scheduledFor ?? Date())
     }
 
     @MainActor
@@ -97,8 +98,20 @@ public struct CompleteView: View {
         let adaptRepo = AdaptationRepository(modelContainer: modelContainer, api: api)
 
         guard let nextW = nextWorkout, let w = workout else {
-            store.adaptation = .failed(NSError(domain: "Complete", code: -2,
-                userInfo: [NSLocalizedDescriptionKey: "No next workout to adapt"]))
+            // No upcoming workout — save feedback if any, then dismiss.
+            if store.feedbackDraft.rating > 0 {
+                let feedback = WorkoutFeedback(
+                    sessionID: sessionID,
+                    submittedAt: Date(),
+                    rating: store.feedbackDraft.rating,
+                    intensity: store.feedbackDraft.intensity,
+                    mood: store.feedbackDraft.mood,
+                    tags: Array(store.feedbackDraft.tags),
+                    exerciseRatings: store.feedbackDraft.exerciseRatings,
+                    note: store.feedbackDraft.note.isEmpty ? nil : store.feedbackDraft.note)
+                try? feedbackRepo.saveFeedback(feedback)
+            }
+            onDismiss()
             return
         }
 

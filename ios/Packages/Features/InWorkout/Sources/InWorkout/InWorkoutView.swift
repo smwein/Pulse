@@ -7,22 +7,29 @@ import DesignSystem
 import Persistence
 import Repositories
 import SwiftData
+import WorkoutDetail
 
 public struct InWorkoutView: View {
     @State private var store: SessionStore
     @State private var elapsedSec: Int = 0
     @State private var sessionStartTime: Date = Date()
     @State private var showDiscardAlert = false
+    @State private var showExerciseSheet: Bool = false
+    @State private var sheetExercise: PlannedExercise?
+    @State private var sheetAsset: ExerciseAssetEntity?
     private let onComplete: (UUID) -> Void
     private let onDiscard: () -> Void
+    private let assetRepo: ExerciseAssetRepository?
 
     public init(workoutID: UUID,
                 modelContainer: ModelContainer,
                 flat: [SessionStore.FlatEntry],
+                assetRepo: ExerciseAssetRepository? = nil,
                 onComplete: @escaping (UUID) -> Void,
                 onDiscard: @escaping () -> Void) {
         let repo = SessionRepository(modelContainer: modelContainer)
         _store = State(initialValue: SessionStore(workoutID: workoutID, flat: flat, repo: repo))
+        self.assetRepo = assetRepo
         self.onComplete = onComplete
         self.onDiscard = onDiscard
     }
@@ -34,9 +41,14 @@ public struct InWorkoutView: View {
                 topBar
                 ProgressSegmentsView(total: store.flat.count, completed: store.idx)
                 if let cur = store.current {
-                    ExerciseCardView(blockLabel: cur.blockLabel,
-                                     exerciseName: cur.exerciseName,
-                                     setIndexLabel: setLabel(cur))
+                    Button {
+                        openExerciseSheet(for: cur)
+                    } label: {
+                        ExerciseCardView(blockLabel: cur.blockLabel,
+                                         exerciseName: cur.exerciseName,
+                                         setIndexLabel: setLabel(cur))
+                    }
+                    .buttonStyle(.plain)
                 }
                 LiveMetricsGridView(
                     elapsed: format(elapsedSec),
@@ -65,6 +77,11 @@ public struct InWorkoutView: View {
         .task { await onAppear() }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
             tick()
+        }
+        .sheet(isPresented: $showExerciseSheet) {
+            if let ex = sheetExercise {
+                ExerciseDetailSheet(exercise: ex, asset: sheetAsset)
+            }
         }
         .alert("Discard workout?", isPresented: $showDiscardAlert) {
             Button("Discard", role: .destructive) {
@@ -145,5 +162,23 @@ public struct InWorkoutView: View {
         } else {
             await store.logCurrentSet()
         }
+    }
+
+    private func openExerciseSheet(for entry: SessionStore.FlatEntry) {
+        let setsForExercise = store.flat
+            .filter { $0.exerciseID == entry.exerciseID }
+            .map { PlannedSet(setNum: $0.setNum, reps: $0.prescribedReps,
+                              load: $0.prescribedLoad, restSec: $0.restSec) }
+        sheetExercise = PlannedExercise(id: entry.exerciseID,
+                                        exerciseID: entry.exerciseID,
+                                        name: entry.exerciseName,
+                                        sets: setsForExercise)
+        if let assetRepo,
+           let assets = try? assetRepo.allAssets() {
+            sheetAsset = assets.first(where: { $0.id == entry.exerciseID })
+        } else {
+            sheetAsset = nil
+        }
+        showExerciseSheet = true
     }
 }

@@ -7,18 +7,23 @@ import DesignSystem
 import AVKit
 #endif
 
-struct ExerciseDetailSheet: View {
+public struct ExerciseDetailSheet: View {
     let exercise: PlannedExercise
     let asset: ExerciseAssetEntity?
 
     @Environment(\.dismiss) private var dismiss
+
+    public init(exercise: PlannedExercise, asset: ExerciseAssetEntity?) {
+        self.exercise = exercise
+        self.asset = asset
+    }
 
 #if os(iOS)
     @State private var player: AVPlayer?
     @State private var looper: AVPlayerLooper?
 #endif
 
-    var body: some View {
+    public var body: some View {
         NavigationStack {
             ZStack {
                 PulseColors.bg0.color.ignoresSafeArea()

@@ -51,15 +51,17 @@ struct RateStepView: View {
                 tagsRow
                 noteRow
 
-                PulseButton("Send to \(coachName) →", variant: .primary) {
+                PulseButton(submitLabel, variant: .primary) {
                     Task { await onSubmit() }
                 }
-                .disabled(!store.feedbackDraft.canSubmit)
-                .opacity(store.feedbackDraft.canSubmit ? 1 : 0.4)
             }
             .padding(PulseSpacing.lg)
         }
         .background(PulseColors.bg0.color.ignoresSafeArea())
+    }
+
+    private var submitLabel: String {
+        store.feedbackDraft.canSubmit ? "Send to \(coachName) →" : "Skip for now →"
     }
 
     private var ratingRow: some View {
