@@ -4,6 +4,7 @@ import CoreModels
 import Persistence
 import Repositories
 import SwiftData
+import WatchBridge
 
 @MainActor
 @Observable
@@ -53,16 +54,25 @@ public final class SessionStore {
     public var onLifecycle: (Lifecycle) -> Void = { _ in }
 
     private let repo: SessionRepository?
+    private let watchTransport: (any WatchSessionTransport)?
+    private let workoutTitle: String
+    private let activityKind: String
 
     /// Test-only: skip persistence.
     public static func preview(flat: [FlatEntry]) -> SessionStore {
         SessionStore(workoutID: UUID(), flat: flat, repo: nil)
     }
 
-    public init(workoutID: UUID, flat: [FlatEntry], repo: SessionRepository?) {
+    public init(workoutID: UUID, flat: [FlatEntry], repo: SessionRepository?,
+                watchTransport: (any WatchSessionTransport)? = nil,
+                workoutTitle: String = "Workout",
+                activityKind: String = "traditionalStrengthTraining") {
         self.workoutID = workoutID
         self.flat = flat
         self.repo = repo
+        self.watchTransport = watchTransport
+        self.workoutTitle = workoutTitle
+        self.activityKind = activityKind
         let first = flat.first
         self.draft = Draft(reps: first?.prescribedReps ?? 0,
                            load: first?.prescribedLoad ?? "",
@@ -78,6 +88,7 @@ public final class SessionStore {
                 let session = try repo.start(workoutID: workoutID)
                 sessionID = session.id
                 restoreProgress(from: session)
+                await sendWorkoutPayload(sessionID: session.id)
             } catch {
                 onLifecycle(.failed("Couldn't start this workout. Please try again."))
             }
@@ -93,6 +104,7 @@ public final class SessionStore {
                              reps: draft.reps,
                              load: draft.load,
                              rpe: draft.rpe)
+            await sendSetLog(sessionID: sessionID, entry: cur)
         }
         if isLastSet {
             await finish()
@@ -120,6 +132,7 @@ public final class SessionStore {
     public func finish() async {
         if let sessionID, let repo {
             try? repo.finish(sessionID: sessionID)
+            try? await watchTransport?.send(.sessionLifecycle(.ended), via: .reliable)
             onLifecycle(.completed(sessionID))
         } else {
             onLifecycle(.completed(UUID()))
@@ -129,6 +142,7 @@ public final class SessionStore {
     public func discard() async {
         if let sessionID, let repo {
             try? repo.discardSession(id: sessionID)
+            try? await watchTransport?.send(.sessionLifecycle(.ended), via: .reliable)
         }
         idx = 0
         phase = .work
@@ -154,6 +168,28 @@ public final class SessionStore {
             idx = max(flat.count - 1, 0)
         }
     }
+
+    private func sendWorkoutPayload(sessionID: UUID) async {
+        guard let watchTransport else { return }
+        let payload = WorkoutPayloadDTO(sessionID: sessionID,
+                                        workoutID: workoutID,
+                                        title: workoutTitle,
+                                        activityKind: activityKind,
+                                        exercises: Self.watchExercises(from: flat))
+        try? await watchTransport.send(.workoutPayload(payload), via: .reliable)
+    }
+
+    private func sendSetLog(sessionID: UUID, entry: FlatEntry) async {
+        guard let watchTransport else { return }
+        let log = SetLogDTO(sessionID: sessionID,
+                            exerciseID: entry.exerciseID,
+                            setNum: entry.setNum,
+                            reps: draft.reps,
+                            load: draft.load,
+                            rpe: draft.rpe == 0 ? nil : draft.rpe,
+                            loggedAt: Date())
+        try? await watchTransport.send(.setLog(log), via: .live)
+    }
 }
 
 public extension SessionStore {
@@ -176,5 +212,28 @@ public extension SessionStore {
             }
         }
         return out
+    }
+
+    static func watchExercises(from flat: [FlatEntry]) -> [WorkoutPayloadDTO.Exercise] {
+        var exercises: [WorkoutPayloadDTO.Exercise] = []
+        var indexByID: [String: Int] = [:]
+        for entry in flat {
+            let set = WorkoutPayloadDTO.SetPrescription(setNum: entry.setNum,
+                                                        prescribedReps: entry.prescribedReps,
+                                                        prescribedLoad: entry.prescribedLoad)
+            if let index = indexByID[entry.exerciseID] {
+                var existingSets = exercises[index].sets
+                existingSets.append(set)
+                exercises[index] = WorkoutPayloadDTO.Exercise(exerciseID: entry.exerciseID,
+                                                              name: entry.exerciseName,
+                                                              sets: existingSets)
+            } else {
+                indexByID[entry.exerciseID] = exercises.count
+                exercises.append(WorkoutPayloadDTO.Exercise(exerciseID: entry.exerciseID,
+                                                            name: entry.exerciseName,
+                                                            sets: [set]))
+            }
+        }
+        return exercises
     }
 }

@@ -5,15 +5,19 @@ import Networking
 import Persistence
 import Repositories
 import HealthKitClient
+import WatchBridge
 
 @main
 struct PulseApp: App {
     @State private var container = makeAppContainer()
     @State private var theme = ThemeStore(activeCoachID: "ace")
+    @State private var watchTransport = LiveWatchSessionTransport()
 
     var body: some Scene {
         WindowGroup {
-            AppShellRoot(appContainer: container, themeStore: theme)
+            AppShellRoot(appContainer: container,
+                         themeStore: theme,
+                         watchTransport: watchTransport)
                 .modelContainer(container.modelContainer)
         }
     }

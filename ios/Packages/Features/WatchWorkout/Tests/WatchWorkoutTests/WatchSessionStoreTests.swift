@@ -205,6 +205,52 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertEqual(lastSent?.channel, .reliable)
     }
 
+    func test_receiveSetLogFromPhone_advancesMirroredWorkout() async throws {
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k",
+            exercises: [.init(exerciseID: "row", name: "Row", sets: [
+                .init(setNum: 1, prescribedReps: 8, prescribedLoad: "100"),
+                .init(setNum: 2, prescribedReps: 8, prescribedLoad: "100")
+            ])])
+        let store = WatchSessionStore(transport: FakeTransport(),
+                                      outbox: SetLogOutbox(directory: tempDir()),
+                                      sessionFactory: FakeWorkoutSessionFactory())
+        await store.receivePayload(payload)
+        try await store.start()
+
+        await store.receiveSetLog(SetLogDTO(sessionID: payload.sessionID,
+                                            exerciseID: "row",
+                                            setNum: 1,
+                                            reps: 8,
+                                            load: "100",
+                                            rpe: nil,
+                                            loggedAt: Date()))
+
+        XCTAssertEqual(store.currentSetNum, 2)
+        if case .resting(let setNum, let exerciseID) = store.state {
+            XCTAssertEqual(setNum, 1)
+            XCTAssertEqual(exerciseID, "row")
+        } else {
+            XCTFail("expected rest after mirrored phone set")
+        }
+    }
+
+    func test_receiveAck_drainsOutbox() async throws {
+        let dir = tempDir()
+        let outbox = SetLogOutbox(directory: dir)
+        let log = SetLogDTO(sessionID: UUID(), exerciseID: "row",
+                            setNum: 1, reps: 8, load: "100",
+                            rpe: nil, loggedAt: Date())
+        try outbox.enqueue(log)
+        let store = WatchSessionStore(transport: FakeTransport(),
+                                      outbox: outbox,
+                                      sessionFactory: FakeWorkoutSessionFactory())
+
+        store.receiveAck(naturalKey: log.naturalKey)
+
+        XCTAssertEqual(try outbox.pending(), [])
+    }
+
     private func tempDir() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("store-\(UUID())")

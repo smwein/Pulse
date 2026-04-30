@@ -42,6 +42,24 @@ final class SessionRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func test_attachWatchSession_persistsCorrelationID() throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let w = seedWorkout(ctx)
+        let repo = SessionRepository(modelContainer: container)
+        let session = try repo.start(workoutID: w.id)
+        let watchID = UUID()
+
+        try repo.attachWatchSession(watchID, to: session.id)
+
+        let sid = session.id
+        let refreshed = try ctx.fetch(FetchDescriptor<SessionEntity>(
+            predicate: #Predicate { $0.id == sid }
+        )).first
+        XCTAssertEqual(refreshed?.watchSessionUUID, watchID)
+    }
+
+    @MainActor
     func test_logSet_isIdempotentOnTriple() throws {
         let container = try PulseModelContainer.inMemory()
         let ctx = container.mainContext

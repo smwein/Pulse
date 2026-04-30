@@ -33,6 +33,7 @@ public final class WatchSessionStore {
     private let payloadStorage: PayloadFileStorage
 
     private var loggedSetCounts: [String: Int] = [:]  // exerciseID → count
+    private var loggedSetKeys: Set<String> = []
 
     public var currentExerciseID: String? {
         guard let payload else { return nil }
@@ -68,6 +69,8 @@ public final class WatchSessionStore {
         }
         self.payload = payload
         self.state = .ready
+        self.loggedSetCounts = [:]
+        self.loggedSetKeys = []
     }
 
     public func start() async throws {
@@ -119,7 +122,7 @@ public final class WatchSessionStore {
         }
         // Bump counter before the wire send so a re-entrant tap during the await
         // suspension can't double-log. Outbox is the source of truth either way.
-        loggedSetCounts[exID, default: 0] += 1
+        markLogged(exerciseID: exID, setNum: setNum)
         try? await transport.send(.setLog(log), via: .reliable)
 
         // Transition to rest unless this was the last set of the workout.
@@ -139,5 +142,44 @@ public final class WatchSessionStore {
         } else {
             state = .active
         }
+    }
+
+    public func receiveSetLog(_ log: SetLogDTO) async {
+        guard payload?.sessionID == log.sessionID else { return }
+        guard markLogged(exerciseID: log.exerciseID, setNum: log.setNum) else { return }
+        if currentExerciseID == nil {
+            state = .ended
+            try? payloadStorage.clear()
+        } else if state == .active {
+            state = .resting(setNum: log.setNum, exerciseID: log.exerciseID)
+        }
+    }
+
+    public func receiveLifecycle(_ event: LifecycleEvent) async {
+        switch event {
+        case .ended:
+            state = .ended
+            try? payloadStorage.clear()
+        case .failed(let reason):
+            state = .failed(reason: reason)
+        case .started(let uuid):
+            watchSessionUUID = uuid
+        }
+    }
+
+    public func receiveAck(naturalKey: String) {
+        do {
+            try outbox.drain(naturalKey: naturalKey)
+        } catch {
+            PulseLogger.session.error("outbox drain failed", error)
+        }
+    }
+
+    @discardableResult
+    private func markLogged(exerciseID: String, setNum: Int) -> Bool {
+        let key = "\(exerciseID)#\(setNum)"
+        guard loggedSetKeys.insert(key).inserted else { return false }
+        loggedSetCounts[exerciseID, default: 0] += 1
+        return true
     }
 }

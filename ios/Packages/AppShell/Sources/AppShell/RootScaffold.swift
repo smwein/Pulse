@@ -8,6 +8,7 @@ import InWorkout
 import Complete
 import CoreModels
 import HealthKitClient
+import WatchBridge
 
 public struct RootScaffold<DebugContent: View>: View {
     @State private var selectedTab: PulseTab = .today
@@ -16,14 +17,18 @@ public struct RootScaffold<DebugContent: View>: View {
     @State private var regenerateSummaries: SevenDayHealthSummary?
     @State private var inWorkoutFor: UUID?
     @State private var completeForSessionID: UUID?
+    @State private var watchMirror: PhoneWatchMirrorCoordinator?
     private let appContainer: AppContainer
     private let themeStore: ThemeStore
+    private let watchTransport: (any WatchSessionTransport)?
     private let debugContent: () -> DebugContent
 
     public init(appContainer: AppContainer, themeStore: ThemeStore,
+                watchTransport: (any WatchSessionTransport)? = nil,
                 @ViewBuilder debugContent: @escaping () -> DebugContent) {
         self.appContainer = appContainer
         self.themeStore = themeStore
+        self.watchTransport = watchTransport
         self.debugContent = debugContent
     }
 
@@ -50,6 +55,19 @@ public struct RootScaffold<DebugContent: View>: View {
         }
         .pulseTheme(themeStore)
         .preferredColorScheme(.dark)
+        .task {
+            guard watchMirror == nil, let watchTransport else { return }
+            let mirror = PhoneWatchMirrorCoordinator(
+                transport: watchTransport,
+                modelContainer: appContainer.modelContainer,
+                onWatchEndedSession: { sid in
+                    inWorkoutFor = nil
+                    completeForSessionID = sid
+                }
+            )
+            mirror.start()
+            watchMirror = mirror
+        }
     }
 
     private var tabTitle: String {
@@ -184,11 +202,29 @@ extension RootScaffold {
             modelContainer: appContainer.modelContainer,
             flat: flat,
             assetRepo: assetRepo,
+            watchTransport: watchTransport,
+            workoutTitle: workout?.title ?? "Workout",
+            activityKind: Self.activityKind(for: workout?.workoutType),
             onComplete: { sid in
                 inWorkoutFor = nil
                 completeForSessionID = sid
             },
             onDiscard: { inWorkoutFor = nil })
+    }
+
+    fileprivate static func activityKind(for workoutType: String?) -> String {
+        switch workoutType?.lowercased() {
+        case .some(let value) where value.contains("hiit"):
+            return "highIntensityIntervalTraining"
+        case .some(let value) where value.contains("run"):
+            return "running"
+        case .some(let value) where value.contains("cycle"):
+            return "cycling"
+        case .some(let value) where value.contains("mobility") || value.contains("yoga"):
+            return "yoga"
+        default:
+            return "traditionalStrengthTraining"
+        }
     }
 
     @ViewBuilder

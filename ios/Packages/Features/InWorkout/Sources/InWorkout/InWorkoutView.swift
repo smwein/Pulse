@@ -7,6 +7,7 @@ import DesignSystem
 import Persistence
 import Repositories
 import SwiftData
+import WatchBridge
 import WorkoutDetail
 
 public struct InWorkoutView: View {
@@ -26,10 +27,18 @@ public struct InWorkoutView: View {
                 modelContainer: ModelContainer,
                 flat: [SessionStore.FlatEntry],
                 assetRepo: ExerciseAssetRepository? = nil,
+                watchTransport: (any WatchSessionTransport)? = nil,
+                workoutTitle: String = "Workout",
+                activityKind: String = "traditionalStrengthTraining",
                 onComplete: @escaping (UUID) -> Void,
                 onDiscard: @escaping () -> Void) {
         let repo = SessionRepository(modelContainer: modelContainer)
-        _store = State(initialValue: SessionStore(workoutID: workoutID, flat: flat, repo: repo))
+        _store = State(initialValue: SessionStore(workoutID: workoutID,
+                                                  flat: flat,
+                                                  repo: repo,
+                                                  watchTransport: watchTransport,
+                                                  workoutTitle: workoutTitle,
+                                                  activityKind: activityKind))
         self.assetRepo = assetRepo
         self.onComplete = onComplete
         self.onDiscard = onDiscard

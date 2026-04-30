@@ -5,16 +5,19 @@ import Networking
 import Persistence
 import Repositories
 import AppShell
+import WatchBridge
 
 struct AppShellRoot: View {
     let appContainer: AppContainer
     let themeStore: ThemeStore
+    let watchTransport: (any WatchSessionTransport)?
 
     var body: some View {
         FirstRunGate(appContainer: appContainer, themeStore: themeStore) {
             RootScaffold(
                 appContainer: appContainer,
-                themeStore: themeStore
+                themeStore: themeStore,
+                watchTransport: watchTransport
             ) {
                 DebugSwitcher(appContainer: appContainer, themeStore: themeStore)
             }

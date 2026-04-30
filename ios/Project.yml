@@ -79,6 +79,7 @@ targets:
       - package: HealthKitClient
       - package: InWorkout
       - package: Complete
+      - package: WatchBridge
   PulseWatch:
     type: application
     platform: watchOS

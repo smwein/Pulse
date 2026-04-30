@@ -79,6 +79,18 @@ public final class SessionRepository {
         }
     }
 
+    public func attachWatchSession(_ watchSessionUUID: UUID, to sessionID: UUID) throws {
+        let ctx = modelContainer.mainContext
+        try ctx.atomicWrite {
+            let sid = sessionID
+            guard let session = try ctx.fetch(FetchDescriptor<SessionEntity>(
+                predicate: #Predicate { $0.id == sid })).first else {
+                throw SessionRepositoryError.sessionNotFound(sid)
+            }
+            session.watchSessionUUID = watchSessionUUID
+        }
+    }
+
     public func discardSession(id: UUID) throws {
         let ctx = modelContainer.mainContext
         try ctx.atomicWrite {

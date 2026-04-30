@@ -3,6 +3,7 @@ import CoreModels
 import Persistence
 import Repositories
 import SwiftData
+import WatchBridge
 @testable import InWorkout
 
 final class SessionStoreTests: XCTestCase {
@@ -86,6 +87,65 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    func test_start_sendsWatchPayload() async throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let workoutID = UUID()
+        ctx.insert(WorkoutEntity(id: workoutID, planID: UUID(), scheduledFor: Date(),
+            title: "Upper", subtitle: "S", workoutType: "Strength", durationMin: 30,
+            status: "scheduled", blocksJSON: Data("[]".utf8),
+            exercisesJSON: Data("[]".utf8)))
+        try ctx.save()
+        let transport = FakeTransport()
+        let store = SessionStore(workoutID: workoutID, flat: makeFlat(setsPerEx: 2, exerciseCount: 1),
+                                 repo: SessionRepository(modelContainer: container),
+                                 watchTransport: transport,
+                                 workoutTitle: "Upper",
+                                 activityKind: "traditionalStrengthTraining")
+
+        await store.start()
+
+        let sent = await transport.sent
+        XCTAssertEqual(sent.count, 1)
+        XCTAssertEqual(sent.first?.channel, .reliable)
+        if case .workoutPayload(let payload) = sent.first?.message {
+            XCTAssertEqual(payload.title, "Upper")
+            XCTAssertEqual(payload.workoutID, workoutID)
+            XCTAssertEqual(payload.exercises.count, 1)
+            XCTAssertEqual(payload.exercises.first?.sets.count, 2)
+        } else {
+            XCTFail("expected workout payload")
+        }
+    }
+
+    @MainActor
+    func test_logCurrentSet_mirrorsPhoneSetToWatch() async throws {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let workoutID = UUID()
+        ctx.insert(WorkoutEntity(id: workoutID, planID: UUID(), scheduledFor: Date(),
+            title: "Upper", subtitle: "S", workoutType: "Strength", durationMin: 30,
+            status: "scheduled", blocksJSON: Data("[]".utf8),
+            exercisesJSON: Data("[]".utf8)))
+        try ctx.save()
+        let transport = FakeTransport()
+        let store = SessionStore(workoutID: workoutID, flat: makeFlat(setsPerEx: 2, exerciseCount: 1),
+                                 repo: SessionRepository(modelContainer: container),
+                                 watchTransport: transport)
+        await store.start()
+
+        await store.logCurrentSet()
+
+        let sent = await transport.sent
+        XCTAssertTrue(sent.contains {
+            if case .setLog(let log) = $0.message {
+                return log.exerciseID == "ex0" && log.setNum == 1 && $0.channel == .live
+            }
+            return false
+        })
+    }
+
+    @MainActor
     func test_discardEmitsDiscardedAndResets() async {
         let store = SessionStore.preview(flat: makeFlat())
         var discarded = false
@@ -117,5 +177,14 @@ final class SessionStoreTests: XCTestCase {
         XCTAssertEqual(flat[0].setNum, 1)
         XCTAssertEqual(flat[1].setNum, 2)
         XCTAssertEqual(flat[2].exerciseID, "row")
+    }
+
+    @MainActor
+    func test_watchExercises_groupsFlatEntriesByExercise() {
+        let payloadExercises = SessionStore.watchExercises(from: makeFlat(setsPerEx: 2, exerciseCount: 2))
+        XCTAssertEqual(payloadExercises.count, 2)
+        XCTAssertEqual(payloadExercises[0].exerciseID, "ex0")
+        XCTAssertEqual(payloadExercises[0].sets.map(\.setNum), [1, 2])
+        XCTAssertEqual(payloadExercises[1].exerciseID, "ex1")
     }
 }

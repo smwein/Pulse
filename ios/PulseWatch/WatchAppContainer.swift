@@ -23,8 +23,15 @@ final class WatchAppContainer {
         // Bridge incoming payloads from WCSession to the store.
         Task { [store, transport] in
             for await msg in await transport.incoming {
-                if case .workoutPayload(let p) = msg {
+                switch msg {
+                case .workoutPayload(let p):
                     await store.receivePayload(p)
+                case .setLog(let log):
+                    await store.receiveSetLog(log)
+                case .sessionLifecycle(let event):
+                    await store.receiveLifecycle(event)
+                case .ack(let naturalKey):
+                    await store.receiveAck(naturalKey: naturalKey)
                 }
             }
         }

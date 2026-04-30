@@ -12,6 +12,7 @@ let package = Package(
         .package(path: "../Persistence"),
         .package(path: "../Repositories"),
         .package(path: "../HealthKitClient"),
+        .package(path: "../WatchBridge"),
         .package(path: "../Features/Onboarding"),
         .package(path: "../Features/Home"),
         .package(path: "../Features/PlanGeneration"),
@@ -23,10 +24,10 @@ let package = Package(
         .target(
             name: "AppShell",
             dependencies: ["CoreModels", "DesignSystem", "Networking", "Persistence",
-                           "Repositories", "HealthKitClient",
+                           "Repositories", "HealthKitClient", "WatchBridge",
                            "Onboarding", "Home", "PlanGeneration", "WorkoutDetail",
                            "InWorkout", "Complete"]
         ),
-        .testTarget(name: "AppShellTests", dependencies: ["AppShell"]),
+        .testTarget(name: "AppShellTests", dependencies: ["AppShell", "WatchBridge", "Persistence"]),
     ]
 )
