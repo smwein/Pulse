@@ -139,3 +139,26 @@ public final class SessionStore {
         onLifecycle(.discarded)
     }
 }
+
+public extension SessionStore {
+    static func flatten(workout: WorkoutEntity) -> [FlatEntry] {
+        guard let blocks = try? JSONDecoder.pulse.decode([WorkoutBlock].self, from: workout.blocksJSON) else {
+            return []
+        }
+        var out: [FlatEntry] = []
+        for block in blocks {
+            for ex in block.exercises {
+                for set in ex.sets {
+                    out.append(.init(blockLabel: block.label,
+                                     exerciseID: ex.exerciseID,
+                                     exerciseName: ex.name,
+                                     setNum: set.setNum,
+                                     prescribedReps: set.reps,
+                                     prescribedLoad: set.load,
+                                     restSec: set.restSec))
+                }
+            }
+        }
+        return out
+    }
+}

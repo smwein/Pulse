@@ -67,4 +67,28 @@ final class SessionStoreTests: XCTestCase {
         await store.discard()
         XCTAssertTrue(discarded)
     }
+
+    @MainActor
+    func test_flatten_unwrapsAllSetsAcrossBlocks() throws {
+        let block = WorkoutBlock(id: "b1", label: "Main", exercises: [
+            PlannedExercise(id: "e1", exerciseID: "back-squat", name: "Back Squat",
+                sets: [
+                    PlannedSet(setNum: 1, reps: 8, load: "60kg", restSec: 60),
+                    PlannedSet(setNum: 2, reps: 8, load: "62.5kg", restSec: 60),
+                ]),
+            PlannedExercise(id: "e2", exerciseID: "row", name: "Row",
+                sets: [PlannedSet(setNum: 1, reps: 10, load: "40kg", restSec: 45)]),
+        ])
+        let blocksData = try JSONEncoder.pulse.encode([block])
+        let w = WorkoutEntity(id: UUID(), planID: UUID(), scheduledFor: Date(),
+            title: "T", subtitle: "S", workoutType: "Strength", durationMin: 30,
+            status: "scheduled", blocksJSON: blocksData,
+            exercisesJSON: Data("[]".utf8))
+        let flat = SessionStore.flatten(workout: w)
+        XCTAssertEqual(flat.count, 3)
+        XCTAssertEqual(flat[0].exerciseID, "back-squat")
+        XCTAssertEqual(flat[0].setNum, 1)
+        XCTAssertEqual(flat[1].setNum, 2)
+        XCTAssertEqual(flat[2].exerciseID, "row")
+    }
 }
