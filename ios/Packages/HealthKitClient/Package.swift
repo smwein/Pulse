@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "HealthKitClient",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .watchOS(.v10), .macOS(.v14)],
     products: [.library(name: "HealthKitClient", targets: ["HealthKitClient"])],
     targets: [
         .target(name: "HealthKitClient"),
