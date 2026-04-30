@@ -95,7 +95,7 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: YES
     dependencies:
       - package: CoreModels
-      - package: WatchBridge
-      - package: WatchWorkout
       - package: HealthKitClient
       - package: Logging
+      - package: WatchBridge
+      - package: WatchWorkout
