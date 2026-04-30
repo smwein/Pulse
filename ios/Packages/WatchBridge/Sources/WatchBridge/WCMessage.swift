@@ -8,7 +8,7 @@ public enum WCMessage: Codable, Equatable, Sendable {
 }
 
 public extension WCMessage {
-    enum CodecError: Error { case missingPayload, invalidPayload }
+    enum CodecError: Error, Equatable { case missingPayload, invalidPayload }
 
     static let userInfoKey = "wcmsg.v1"
 

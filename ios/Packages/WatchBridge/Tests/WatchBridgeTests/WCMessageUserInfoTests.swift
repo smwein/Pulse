@@ -18,6 +18,15 @@ final class WCMessageUserInfoTests: XCTestCase {
         XCTAssertEqual(try WCMessage(userInfo: userInfo), msg)
     }
     func test_userInfoMissingKey_throws() {
-        XCTAssertThrowsError(try WCMessage(userInfo: ["nope": "x"]))
+        XCTAssertThrowsError(try WCMessage(userInfo: ["nope": "x"])) { error in
+            XCTAssertEqual(error as? WCMessage.CodecError, .missingPayload)
+        }
+    }
+
+    func test_userInfoCorruptData_throwsInvalidPayload() {
+        let badInfo: [String: Any] = [WCMessage.userInfoKey: Data([0xFF, 0xFE])]
+        XCTAssertThrowsError(try WCMessage(userInfo: badInfo)) { error in
+            XCTAssertEqual(error as? WCMessage.CodecError, .invalidPayload)
+        }
     }
 }
