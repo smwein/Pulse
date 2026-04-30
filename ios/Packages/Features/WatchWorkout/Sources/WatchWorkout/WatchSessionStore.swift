@@ -72,6 +72,10 @@ public final class WatchSessionStore {
 
     public func start() async throws {
         guard let payload else { return }
+        // Idempotent: only `.ready` is a valid entry. Two quick taps must not
+        // call the factory twice — a second factory failure would wipe the
+        // success of the first.
+        guard state == .ready else { return }
         state = .starting
         do {
             let uuid = try await factory.startSession(activityKind: payload.activityKind)
@@ -120,8 +124,9 @@ public final class WatchSessionStore {
 
         // Transition to rest unless this was the last set of the workout.
         if currentExerciseID == nil {
-            // last set logged — caller should call endSession()
-            state = .ended
+            // Last set logged — auto-end so the HK session doesn't leak when
+            // the UI just renders "Done" with no further action.
+            try? await endSession()
         } else {
             state = .resting(setNum: setNum, exerciseID: exID)
         }

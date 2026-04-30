@@ -119,6 +119,51 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertTrue(setLogSends.allSatisfy { $0.channel == .reliable })
     }
 
+    func test_start_isIdempotent_secondCallNoOps() async throws {
+        let transport = FakeTransport()
+        let factory = FakeWorkoutSessionFactory()
+        let dir = tempDir()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k", exercises: [])
+        let store = WatchSessionStore(transport: transport,
+                                      outbox: SetLogOutbox(directory: dir),
+                                      sessionFactory: factory,
+                                      payloadStorage: PayloadFileStorage(directory: dir))
+        await store.receivePayload(payload)
+        try await store.start()
+        try await store.start()  // second call must no-op
+        XCTAssertEqual(store.state, .active)
+        let sent = await transport.sent
+        let started = sent.filter {
+            if case .sessionLifecycle(.started) = $0.message { return true } else { return false }
+        }
+        XCTAssertEqual(started.count, 1)
+    }
+
+    func test_confirmLastSet_autoEndsSession() async throws {
+        let factory = FakeWorkoutSessionFactory()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k",
+            exercises: [.init(exerciseID: "row", name: "Row", sets: [
+                .init(setNum: 1, prescribedReps: 8, prescribedLoad: "100")
+            ])])
+        let dir = tempDir()
+        let transport = FakeTransport()
+        let store = WatchSessionStore(transport: transport,
+                                      outbox: SetLogOutbox(directory: dir),
+                                      sessionFactory: factory,
+                                      payloadStorage: PayloadFileStorage(directory: dir))
+        await store.receivePayload(payload)
+        try await store.start()
+        await store.confirmCurrentSet()  // only set → auto-end
+        XCTAssertEqual(store.state, .ended)
+        XCTAssertTrue(factory.ended)
+        let sent = await transport.sent
+        let endedEvents = sent.filter { $0.message == .sessionLifecycle(.ended) }
+        XCTAssertEqual(endedEvents.count, 1)
+        XCTAssertEqual(endedEvents.first?.channel, .reliable)
+    }
+
     func test_advanceFromRest_returnsToActiveOrEnds() async throws {
         let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
             title: "T", activityKind: "k",
