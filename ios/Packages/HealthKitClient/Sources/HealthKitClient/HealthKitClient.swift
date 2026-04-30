@@ -119,3 +119,42 @@ public struct HealthKitClient: Sendable {
     }
     #endif
 }
+
+public extension HealthKitClient {
+    func requestWriteAuthorization() async throws {
+        #if canImport(HealthKit)
+        guard let store else { return }
+        let share: Set<HKSampleType> = [
+            HKObjectType.workoutType(),
+            HKQuantityType(.activeEnergyBurned),
+            HKQuantityType(.heartRate),
+        ]
+        try await store.requestAuthorization(toShare: share, read: nil)
+        #endif
+    }
+
+    /// Returns true when *all* write categories are authorized.
+    /// HealthKit auth status is per-type; we treat partial as not-ready.
+    func writeAuthorizationStatus() -> WriteAuthStatus {
+        #if canImport(HealthKit)
+        guard let store = store as? HKHealthStore else { return .undetermined }
+        let types: [HKSampleType] = [
+            HKObjectType.workoutType(),
+            HKQuantityType(.activeEnergyBurned),
+            HKQuantityType(.heartRate),
+        ]
+        let statuses = types.map { store.authorizationStatus(for: $0) }
+        if statuses.allSatisfy({ $0 == .sharingAuthorized }) { return .authorized }
+        if statuses.contains(.sharingDenied) { return .denied }
+        return .undetermined
+        #else
+        return .undetermined
+        #endif
+    }
+}
+
+public enum WriteAuthStatus: Sendable, Equatable {
+    case undetermined
+    case authorized
+    case denied
+}

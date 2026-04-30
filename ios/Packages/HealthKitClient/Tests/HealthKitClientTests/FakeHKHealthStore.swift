@@ -5,12 +5,14 @@ import HealthKit
 
 final class FakeHKHealthStore: HKHealthStoreProtocol, @unchecked Sendable {
     var authorizationCalled = false
+    var lastShareTypes: Set<HKSampleType>?
     var samplesByType: [HKSampleType: [HKSample]] = [:]
     var shouldThrow: Error?
 
     func requestAuthorization(toShare typesToShare: Set<HKSampleType>?,
                               read typesToRead: Set<HKObjectType>?) async throws {
         authorizationCalled = true
+        lastShareTypes = typesToShare
         if let shouldThrow { throw shouldThrow }
     }
 
