@@ -30,12 +30,27 @@ public final class WatchSessionStore {
     private let transport: any WatchSessionTransport
     private let outbox: SetLogOutbox
     private let factory: WorkoutSessionFactory
+    private let payloadStorage: PayloadFileStorage
 
     public init(transport: any WatchSessionTransport,
                 outbox: SetLogOutbox,
-                sessionFactory: WorkoutSessionFactory) {
+                sessionFactory: WorkoutSessionFactory,
+                payloadStorage: PayloadFileStorage = PayloadFileStorage(
+                    directory: FileManager.default.urls(for: .applicationSupportDirectory,
+                                                        in: .userDomainMask)[0])) {
         self.transport = transport
         self.outbox = outbox
         self.factory = sessionFactory
+        self.payloadStorage = payloadStorage
+    }
+
+    public func receivePayload(_ payload: WorkoutPayloadDTO) async {
+        do {
+            try payloadStorage.write(payload)
+        } catch {
+            PulseLogger.session.error("failed to persist payload", error)
+        }
+        self.payload = payload
+        self.state = .ready
     }
 }

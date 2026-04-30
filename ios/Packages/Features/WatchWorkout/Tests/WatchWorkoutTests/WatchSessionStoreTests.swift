@@ -12,6 +12,24 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertNil(store.payload)
     }
 
+    func test_receivePayload_setsReadyAndPersists() async throws {
+        let dir = tempDir()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "Pull A", activityKind: "traditionalStrengthTraining", exercises: [])
+        let store = WatchSessionStore(transport: FakeTransport(),
+                                      outbox: SetLogOutbox(directory: dir),
+                                      sessionFactory: FakeWorkoutSessionFactory(),
+                                      payloadStorage: PayloadFileStorage(directory: dir))
+        await store.receivePayload(payload)
+        XCTAssertEqual(store.state, .ready)
+        XCTAssertEqual(store.payload, payload)
+
+        let url = dir.appendingPathComponent("active-workout-payload.json")
+        let data = try Data(contentsOf: url)
+        let reloaded = try JSONDecoder().decode(WorkoutPayloadDTO.self, from: data)
+        XCTAssertEqual(reloaded, payload)
+    }
+
     private func tempDir() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("store-\(UUID())")
