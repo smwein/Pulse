@@ -74,6 +74,7 @@ final class WatchSessionStoreTests: XCTestCase {
         let sent = await transport.sent
         XCTAssertEqual(sent.count, 1)
         XCTAssertEqual(sent[0].message, .sessionLifecycle(.failed(reason: .sessionStartFailed)))
+        XCTAssertEqual(sent[0].channel, .reliable)
     }
 
     func test_currentExercise_andSetNum_advanceWithLogs() async throws {
@@ -134,6 +135,7 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertEqual(store.state, .ended)
         let lastSent = await transport.sent.last
         XCTAssertEqual(lastSent?.message, .sessionLifecycle(.ended))
+        XCTAssertEqual(lastSent?.channel, .reliable)
     }
 
     private func tempDir() -> URL {

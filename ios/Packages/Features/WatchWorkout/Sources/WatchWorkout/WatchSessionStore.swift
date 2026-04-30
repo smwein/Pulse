@@ -81,8 +81,11 @@ public final class WatchSessionStore {
                                      via: .live)
         } catch {
             state = .failed(reason: .sessionStartFailed)
+            // Terminal events route over .reliable so an unreachable phone
+            // doesn't drop the failure signal — `.started` stays on .live for
+            // low-latency happy-path UI.
             try? await transport.send(.sessionLifecycle(.failed(reason: .sessionStartFailed)),
-                                      via: .live)
+                                      via: .reliable)
             throw error
         }
     }
@@ -95,7 +98,8 @@ public final class WatchSessionStore {
         }
         state = .ended
         try? payloadStorage.clear()
-        try? await transport.send(.sessionLifecycle(.ended), via: .live)
+        // Terminal event over .reliable — see start()'s failure path for rationale.
+        try? await transport.send(.sessionLifecycle(.ended), via: .reliable)
     }
 
     public func confirmCurrentSet() async {
