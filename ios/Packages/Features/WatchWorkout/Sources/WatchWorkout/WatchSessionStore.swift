@@ -126,4 +126,13 @@ public final class WatchSessionStore {
             state = .resting(setNum: setNum, exerciseID: exID)
         }
     }
+
+    public func advanceFromRest() async {
+        guard case .resting = state else { return }
+        if currentExerciseID == nil {
+            state = .ended
+        } else {
+            state = .active
+        }
+    }
 }

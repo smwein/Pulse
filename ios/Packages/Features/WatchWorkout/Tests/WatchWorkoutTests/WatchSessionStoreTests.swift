@@ -119,6 +119,28 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertTrue(setLogSends.allSatisfy { $0.channel == .reliable })
     }
 
+    func test_advanceFromRest_returnsToActiveOrEnds() async throws {
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k",
+            exercises: [.init(exerciseID: "row", name: "Row", sets: [
+                .init(setNum: 1, prescribedReps: 8, prescribedLoad: "100"),
+                .init(setNum: 2, prescribedReps: 8, prescribedLoad: "100")
+            ])])
+        let dir = tempDir()
+        let store = WatchSessionStore(transport: FakeTransport(),
+            outbox: SetLogOutbox(directory: dir),
+            sessionFactory: FakeWorkoutSessionFactory(),
+            payloadStorage: PayloadFileStorage(directory: dir))
+        await store.receivePayload(payload)
+        try await store.start()
+        await store.confirmCurrentSet()  // → resting
+        if case .resting = store.state {} else { XCTFail("expected .resting") }
+        await store.advanceFromRest()
+        XCTAssertEqual(store.state, .active)
+        await store.confirmCurrentSet()  // last set → ended (no rest)
+        XCTAssertEqual(store.state, .ended)
+    }
+
     func test_endSession_callsFactoryAndEmitsLifecycle() async throws {
         let transport = FakeTransport()
         let factory = FakeWorkoutSessionFactory()
