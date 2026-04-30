@@ -32,7 +32,9 @@ public struct HomeView: View {
                         title: w.title,
                         subtitle: w.subtitle,
                         durationMin: w.durationMin,
-                        workoutType: w.workoutType
+                        workoutType: w.workoutType,
+                        status: w.status,
+                        actionLabel: store.workoutActionLabel
                     ) { onViewWorkout(w.id) }
                 } else {
                     PulseCard {
@@ -44,6 +46,10 @@ public struct HomeView: View {
                                         variant: .primary, action: onRegenerate)
                         }
                     }
+                }
+                if let stats = store.weeklyStats,
+                   let target = store.profile?.weeklyTargetMinutes {
+                    WeeklyProgressCardView(stats: stats, weeklyTargetMinutes: target)
                 }
                 weekStrip
                 if store.todaysWorkout != nil {
@@ -65,6 +71,9 @@ public struct HomeView: View {
         let calendar = Calendar(identifier: .iso8601)
         var filled: Set<DateComponents> = []
         if let date = store.todaysWorkout?.scheduledFor {
+            filled.insert(calendar.dateComponents([.year, .month, .day], from: date))
+        }
+        for date in store.weeklyStats?.completedDates ?? [] {
             filled.insert(calendar.dateComponents([.year, .month, .day], from: date))
         }
         return WeekStripView(filledDates: filled, calendar: calendar)

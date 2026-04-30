@@ -115,13 +115,10 @@ public struct RootScaffold<DebugContent: View>: View {
     }
 
     private var progressPlaceholder: some View {
-        VStack(spacing: PulseSpacing.lg) {
-            Ring(progress: 0.42)
-            Text("Weekly ring (placeholder)")
-                .pulseFont(.small)
-                .foregroundStyle(PulseColors.ink2.color)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        TrainingProgressView(
+            workoutRepo: WorkoutRepository(modelContainer: appContainer.modelContainer),
+            profileRepo: ProfileRepository(modelContainer: appContainer.modelContainer)
+        )
     }
 
     private func triggerRegenerate() {
