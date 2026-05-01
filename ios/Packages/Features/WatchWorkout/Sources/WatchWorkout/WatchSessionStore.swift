@@ -164,4 +164,15 @@ public final class WatchSessionStore {
             state = .active
         }
     }
+
+    /// Replay any pending outbox entries when reachability is known to be good.
+    /// Caller decides timing (e.g., on watch app relaunch). Idempotent — entries
+    /// stay in the outbox until an `.ack` drains them.
+    public func replayOutbox() async {
+        guard await transport.isReachable else { return }
+        let pending = (try? outbox.pending()) ?? []
+        for log in pending {
+            try? await transport.send(.setLog(log), via: .reliable)
+        }
+    }
 }

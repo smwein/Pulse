@@ -249,6 +249,27 @@ final class WatchSessionStoreTests: XCTestCase {
         }))
     }
 
+    func test_outboxReplays_onReachabilityGain() async throws {
+        let transport = FakeTransport()
+        await transport.setReachable(false)
+        let dir = tempDir()
+        let outbox = SetLogOutbox(directory: dir)
+        let s = UUID()
+        let a = SetLogDTO(sessionID: s, exerciseID: "e", setNum: 1, reps: 5, load: "0",
+                          rpe: nil, loggedAt: Date())
+        let b = SetLogDTO(sessionID: s, exerciseID: "e", setNum: 2, reps: 5, load: "0",
+                          rpe: nil, loggedAt: Date())
+        try outbox.enqueue(a); try outbox.enqueue(b)
+        let store = WatchSessionStore(transport: transport, outbox: outbox,
+            sessionFactory: FakeWorkoutSessionFactory(),
+            payloadStorage: PayloadFileStorage(directory: dir))
+        await transport.setReachable(true)
+        await store.replayOutbox()
+        let sent = await transport.sent
+        let setLogs = sent.filter { if case .setLog = $0.message { return true } else { return false } }
+        XCTAssertEqual(setLogs.count, 2)
+    }
+
     private func tempDir() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("store-\(UUID())")
