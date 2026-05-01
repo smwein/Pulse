@@ -38,5 +38,8 @@ final class WatchAppContainer {
         Task { [store] in
             await store.replayOutbox()
         }
+
+        // Recover state if a HKWorkoutSession survived the previous app kill.
+        Task { [store] in await store.recoverIfActive() }
     }
 }
