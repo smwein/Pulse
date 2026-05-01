@@ -165,6 +165,18 @@ public final class WatchSessionStore {
         }
     }
 
+    /// On watch app relaunch: if a `HKWorkoutSession` is still active and a
+    /// persisted payload exists, restore state to `.active` so the UI can
+    /// resume the workout. No-op if either signal is missing.
+    public func recoverIfActive() async {
+        let recovered = await factory.recoverIfActive()
+        let stored = (try? payloadStorage.read()) ?? nil
+        guard let uuid = recovered, let payload = stored else { return }
+        self.payload = payload
+        self.watchSessionUUID = uuid
+        self.state = .active
+    }
+
     /// Replay any pending outbox entries when reachability is known to be good.
     /// Caller decides timing (e.g., on watch app relaunch). Idempotent — entries
     /// stay in the outbox until an `.ack` drains them.

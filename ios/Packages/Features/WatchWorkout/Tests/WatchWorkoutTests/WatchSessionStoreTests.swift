@@ -266,6 +266,36 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertEqual(try outbox.pending().count, 0)
     }
 
+    func test_recoverIfActive_restoresStateFromPayloadAndUUID() async throws {
+        let dir = tempDir()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k", exercises: [])
+        let storage = PayloadFileStorage(directory: dir)
+        try storage.write(payload)
+
+        let factory = FakeWorkoutSessionFactory()
+        factory.recoveredUUID = UUID()
+        let store = WatchSessionStore(transport: FakeTransport(),
+            outbox: SetLogOutbox(directory: dir),
+            sessionFactory: factory,
+            payloadStorage: storage)
+        await store.recoverIfActive()
+        XCTAssertEqual(store.state, .active)
+        XCTAssertEqual(store.payload, payload)
+        XCTAssertEqual(store.watchSessionUUID, factory.recoveredUUID)
+    }
+
+    func test_recoverIfActive_doesNothingWhenNoActiveSession() async throws {
+        let dir = tempDir()
+        let factory = FakeWorkoutSessionFactory()  // recoveredUUID = nil
+        let store = WatchSessionStore(transport: FakeTransport(),
+            outbox: SetLogOutbox(directory: dir),
+            sessionFactory: factory,
+            payloadStorage: PayloadFileStorage(directory: dir))
+        await store.recoverIfActive()
+        XCTAssertEqual(store.state, .idle)
+    }
+
     func test_outboxReplays_onReachabilityGain() async throws {
         let transport = FakeTransport()
         await transport.setReachable(false)

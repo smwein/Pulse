@@ -47,10 +47,25 @@ public final class LiveWorkoutSessionFactory: WorkoutSessionFactory, @unchecked 
     }
 
     public func recoverIfActive() async -> UUID? {
-        // iOS 17/watchOS 10+: HKHealthStore exposes a recovery API. The exact name
-        // varies across SDK versions; resolve at implementation time. This stub
-        // returns nil until the device-side path is wired up in Task Group 13.
-        return nil
+        // Returns the recovered HKWorkoutSession (or nil if none active). API
+        // requires iOS 26+/watchOS 5+; the file is `#if os(watchOS)` and the
+        // package targets watchOS 10+, so availability is satisfied.
+        //
+        // HKWorkoutSession has no public UUID property (TG6 fix used synthetic
+        // UUIDs that aren't persisted across crashes). Generate a fresh UUID;
+        // the phone tracks SessionEntity by sessionID (in the persisted
+        // payload), not by watchSessionUUID, so a fresh correlation token is
+        // fine. Forward-flag: if we want UUID continuity across kill-recover,
+        // persist it alongside the payload.
+        let recovered: HKWorkoutSession? = await withCheckedContinuation { cont in
+            store.recoverActiveWorkoutSession { session, _ in
+                cont.resume(returning: session)
+            }
+        }
+        guard let session = recovered else { return nil }
+        self.session = session
+        self.builder = session.associatedWorkoutBuilder()
+        return UUID()
     }
 
     private static func activityType(for kind: String) -> HKWorkoutActivityType {
