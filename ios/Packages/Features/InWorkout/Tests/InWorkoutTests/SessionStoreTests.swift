@@ -121,6 +121,32 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    func test_start_pushesPayloadWhenWatchReachable() async throws {
+        let transport = FakeTransport()
+        await transport.setReachable(true)
+        let (store, _, workoutID) = try await makeStoreWithFreshWorkout()
+        await store.startWithWatch(transport: transport)
+        let sent = await transport.sent
+        XCTAssertEqual(sent.count, 1)
+        XCTAssertEqual(sent[0].channel, .reliable)
+        if case .workoutPayload(let p) = sent[0].message {
+            XCTAssertEqual(p.workoutID, workoutID)
+        } else {
+            XCTFail("expected payload push")
+        }
+    }
+
+    @MainActor
+    func test_start_skipsPushWhenWatchUnreachable() async throws {
+        let transport = FakeTransport()
+        await transport.setReachable(false)
+        let (store, _, _) = try await makeStoreWithFreshWorkout()
+        await store.startWithWatch(transport: transport)
+        let sent = await transport.sent
+        XCTAssertTrue(sent.isEmpty)
+    }
+
+    @MainActor
     func test_flatten_unwrapsAllSetsAcrossBlocks() throws {
         let block = WorkoutBlock(id: "b1", label: "Main", exercises: [
             PlannedExercise(id: "e1", exerciseID: "back-squat", name: "Back Squat",
@@ -163,6 +189,22 @@ final class SessionStoreTests: XCTestCase {
         let store = SessionStore(workoutID: workout.id, flat: flat, repo: repo)
         await store.start()
         return (store, ctx, store.sessionID!, workout.id)
+    }
+
+    @MainActor
+    private func makeStoreWithFreshWorkout() async throws
+        -> (store: SessionStore, ctx: ModelContext, workoutID: UUID)
+    {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let workout = WorkoutEntity(id: UUID(), planID: UUID(),
+            scheduledFor: Date(), title: "T", subtitle: "S",
+            workoutType: "Strength", durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8))
+        ctx.insert(workout); try ctx.save()
+        let repo = SessionRepository(modelContainer: container)
+        let store = SessionStore(workoutID: workout.id, flat: makeFlat(), repo: repo)
+        return (store, ctx, workout.id)
     }
 
     @MainActor

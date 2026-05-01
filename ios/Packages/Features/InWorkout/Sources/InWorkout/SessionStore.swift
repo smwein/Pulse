@@ -173,6 +173,44 @@ extension SessionStore {
         }
     }
 
+    /// Starts the local session and, if the Watch is reachable, pushes the
+    /// workout payload via `transferUserInfo` (reliable channel). When
+    /// unreachable, falls through to the Plan 4 no-Watch path silently.
+    public func startWithWatch(transport: any WatchSessionTransport) async {
+        await self.start()
+        guard await transport.isReachable else { return }
+        guard let payload = currentPayload() else { return }
+        try? await transport.send(.workoutPayload(payload), via: .reliable)
+    }
+
+    /// Builds a `WorkoutPayloadDTO` from the in-flight session's flattened entries.
+    /// Groups consecutive `FlatEntry` rows by `exerciseID`, preserving first-occurrence
+    /// order. Note: this codebase doesn't carry the workout title or activity kind
+    /// through to `SessionStore`; hardcoded placeholders are used (forward-flag).
+    private func currentPayload() -> WorkoutPayloadDTO? {
+        guard let sid = sessionID else { return nil }
+        var byExercise: [(id: String, name: String, sets: [WorkoutPayloadDTO.SetPrescription])] = []
+        for entry in flat {
+            if let i = byExercise.firstIndex(where: { $0.id == entry.exerciseID }) {
+                byExercise[i].sets.append(.init(setNum: entry.setNum,
+                    prescribedReps: entry.prescribedReps,
+                    prescribedLoad: entry.prescribedLoad))
+            } else {
+                byExercise.append((id: entry.exerciseID, name: entry.exerciseName,
+                    sets: [.init(setNum: entry.setNum,
+                                 prescribedReps: entry.prescribedReps,
+                                 prescribedLoad: entry.prescribedLoad)]))
+            }
+        }
+        let exercises = byExercise.map {
+            WorkoutPayloadDTO.Exercise(exerciseID: $0.id, name: $0.name, sets: $0.sets)
+        }
+        return WorkoutPayloadDTO(sessionID: sid, workoutID: workoutID,
+                                 title: "Workout",
+                                 activityKind: "traditionalStrengthTraining",
+                                 exercises: exercises)
+    }
+
     /// Forwards a remote set log (originated from the Watch) to the repository.
     /// Idempotency is provided by `SessionRepository.logSet`'s upsert key
     /// (sessionID, exerciseID, setNum) — two identical applies result in one row.
