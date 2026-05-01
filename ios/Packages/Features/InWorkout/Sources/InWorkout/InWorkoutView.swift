@@ -23,12 +23,14 @@ public struct InWorkoutView: View {
     private let onDiscard: () -> Void
     private let assetRepo: ExerciseAssetRepository?
     private let transport: (any WatchSessionTransport)?
+    private let mirroredObserver: (any MirroredSessionObserver)?
 
     public init(workoutID: UUID,
                 modelContainer: ModelContainer,
                 flat: [SessionStore.FlatEntry],
                 assetRepo: ExerciseAssetRepository? = nil,
                 transport: (any WatchSessionTransport)? = nil,
+                mirroredObserver: (any MirroredSessionObserver)? = nil,
                 healthKit: (any HealthKitAuthGate)? = nil,
                 onComplete: @escaping (UUID) -> Void,
                 onDiscard: @escaping () -> Void) {
@@ -37,6 +39,7 @@ public struct InWorkoutView: View {
                                                   repo: repo, authGate: healthKit))
         self.assetRepo = assetRepo
         self.transport = transport
+        self.mirroredObserver = mirroredObserver
         self.onComplete = onComplete
         self.onDiscard = onDiscard
     }
@@ -47,6 +50,7 @@ public struct InWorkoutView: View {
             VStack(alignment: .leading, spacing: PulseSpacing.lg) {
                 topBar
                 ProgressSegmentsView(total: store.flat.count, completed: store.idx)
+                LiveHRCardView(model: store.hrCardModel)
                 if let cur = store.current {
                     Button {
                         openExerciseSheet(for: cur)
@@ -85,6 +89,11 @@ public struct InWorkoutView: View {
         .task {
             if let transport {
                 await store.bridgeIncoming(transport: transport)
+            }
+        }
+        .task {
+            if let mirroredObserver {
+                await store.bridgeMirroredObserver(mirroredObserver)
             }
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in

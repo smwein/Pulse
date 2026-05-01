@@ -12,13 +12,16 @@ public struct AppContainer: Sendable {
     public let manifestURL: URL
     public let healthKit: HealthKitClient
     public let transport: any WatchSessionTransport
+    public let mirroredObserver: any MirroredSessionObserver
 
     public init(modelContainer: ModelContainer, api: APIClient, manifestURL: URL,
-                healthKit: HealthKitClient, transport: any WatchSessionTransport) {
+                healthKit: HealthKitClient, transport: any WatchSessionTransport,
+                mirroredObserver: any MirroredSessionObserver) {
         self.modelContainer = modelContainer
         self.api = api
         self.manifestURL = manifestURL
         self.healthKit = healthKit
         self.transport = transport
+        self.mirroredObserver = mirroredObserver
     }
 }

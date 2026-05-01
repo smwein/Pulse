@@ -36,8 +36,10 @@ struct PulseApp: App {
             workerURL: Secrets.workerURL,
             deviceToken: Secrets.deviceToken
         ))
+        // FakeMirroredObserver until TG10.4 wires the real LiveMirroredSessionObserver.
         return AppContainer(modelContainer: modelContainer, api: api, manifestURL: Secrets.manifestURL,
                             healthKit: HealthKitClient.live(),
-                            transport: LiveWatchSessionTransport())
+                            transport: LiveWatchSessionTransport(),
+                            mirroredObserver: FakeMirroredObserver())
     }
 }

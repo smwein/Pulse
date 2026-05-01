@@ -54,6 +54,11 @@ public final class SessionStore {
     public private(set) var watchSessionEnded: Bool = false
     public private(set) var watchFailureReason: LifecycleEvent.FailureReason?
 
+    // Live HR card — fed by `bridgeMirroredObserver`. The model is a stable
+    // object reference; its internal `samples` mutates and `@Observable`
+    // propagates via the model's own observation.
+    public let hrCardModel: LiveHRCardModel = LiveHRCardModel()
+
     public var onLifecycle: (Lifecycle) -> Void = { _ in }
 
     private let repo: SessionRepository?
@@ -229,6 +234,16 @@ extension SessionStore {
                                  title: "Workout",
                                  activityKind: "traditionalStrengthTraining",
                                  exercises: exercises)
+    }
+
+    /// Long-lived: subscribe to the mirrored observer's BPM stream and feed
+    /// the HR card model. Caller (InWorkoutView) wraps in a Task and cancels
+    /// on view dismissal.
+    public func bridgeMirroredObserver(_ observer: any MirroredSessionObserver) async {
+        await observer.startObserving()
+        for await bpm in await observer.heartRateBPM {
+            hrCardModel.record(bpm: bpm, at: Date())
+        }
     }
 
     /// Forwards a remote set log (originated from the Watch) to the repository.

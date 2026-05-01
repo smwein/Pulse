@@ -187,6 +187,7 @@ extension RootScaffold {
             flat: flat,
             assetRepo: assetRepo,
             transport: appContainer.transport,
+            mirroredObserver: appContainer.mirroredObserver,
             healthKit: appContainer.healthKit,
             onComplete: { sid in
                 inWorkoutFor = nil
