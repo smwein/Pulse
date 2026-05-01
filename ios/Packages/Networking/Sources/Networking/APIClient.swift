@@ -54,3 +54,24 @@ public enum APIClientError: Error, Equatable, Sendable {
     case badStatus(Int)
     case decoding(String)
 }
+
+extension APIClientError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .badStatus(0):
+            return "Workout generation is not configured in this build."
+        case .badStatus(400):
+            return "The workout request was malformed. Please try again."
+        case .badStatus(401), .badStatus(403):
+            return "The workout service rejected this device token. Rebuild the app with the matching DEVICE_TOKEN."
+        case .badStatus(429):
+            return "The workout service is rate limited. Please wait a minute and try again."
+        case .badStatus(let status) where status >= 500:
+            return "The workout service is temporarily unavailable (\(status)). Please try again."
+        case .badStatus(let status):
+            return "The workout service returned HTTP \(status)."
+        case .decoding(let message):
+            return "The workout service returned a response Pulse couldn't read: \(message)"
+        }
+    }
+}
