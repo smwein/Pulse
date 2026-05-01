@@ -92,6 +92,20 @@ public final class SessionRepository {
         }
     }
 
+    /// Records the Watch-side session UUID on the local SessionEntity.
+    /// Used by the WCSession bridge when a `.sessionLifecycle(.started)` arrives.
+    public func setWatchSessionUUID(sessionID: UUID, watchSessionUUID: UUID) throws {
+        let ctx = modelContainer.mainContext
+        try ctx.atomicWrite {
+            let sid = sessionID
+            guard let session = try ctx.fetch(FetchDescriptor<SessionEntity>(
+                predicate: #Predicate { $0.id == sid })).first else {
+                throw SessionRepositoryError.sessionNotFound(sid)
+            }
+            session.watchSessionUUID = watchSessionUUID
+        }
+    }
+
     /// Returns any in-progress session whose Workout is still flagged "in_progress".
     /// Used by `FirstRunGate` to detect orphaned sessions on relaunch.
     public func orphanedInProgressSession() throws -> SessionEntity? {

@@ -48,6 +48,11 @@ public final class SessionStore {
     public private(set) var secs: Int = 0
     public var draft: Draft
 
+    // Watch bridge surface — observed by InWorkoutView to react to lifecycle.
+    public private(set) var watchSessionUUID: UUID?
+    public private(set) var watchSessionEnded: Bool = false
+    public private(set) var watchFailureReason: LifecycleEvent.FailureReason?
+
     public var onLifecycle: (Lifecycle) -> Void = { _ in }
 
     private let repo: SessionRepository?
@@ -143,6 +148,31 @@ public final class SessionStore {
 }
 
 extension SessionStore {
+    /// Long-lived task: subscribes to `transport.incoming` and dispatches each
+    /// message to the appropriate handler. Caller is responsible for cancelling
+    /// the returned `Task` on session end.
+    public func bridgeIncoming(transport: any WatchSessionTransport) async {
+        for await msg in await transport.incoming {
+            switch msg {
+            case .setLog(let dto):
+                await applyRemoteSetLog(dto)
+                try? await transport.send(.ack(naturalKey: dto.naturalKey), via: .live)
+            case .sessionLifecycle(.started(let uuid)):
+                self.watchSessionUUID = uuid
+                if let sid = sessionID, let repo {
+                    try? repo.setWatchSessionUUID(sessionID: sid, watchSessionUUID: uuid)
+                }
+            case .sessionLifecycle(.ended):
+                self.watchSessionEnded = true
+            case .sessionLifecycle(.failed(let r)):
+                PulseLogger.session.error("watch lifecycle failed: \(r.rawValue)")
+                self.watchFailureReason = r
+            case .ack, .workoutPayload:
+                break
+            }
+        }
+    }
+
     /// Forwards a remote set log (originated from the Watch) to the repository.
     /// Idempotency is provided by `SessionRepository.logSet`'s upsert key
     /// (sessionID, exerciseID, setNum) — two identical applies result in one row.

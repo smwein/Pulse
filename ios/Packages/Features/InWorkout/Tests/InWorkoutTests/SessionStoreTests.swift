@@ -95,6 +95,32 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    func test_bridgeIncoming_appliesSetLog() async throws {
+        let (store, ctx, sessionID, _) = try await makeStoreWithStartedSession()
+        let transport = FakeTransport()
+        let bridge = Task { await store.bridgeIncoming(transport: transport) }
+        let dto = SetLogDTO(sessionID: sessionID, exerciseID: "row", setNum: 1,
+            reps: 8, load: "135", rpe: nil, loggedAt: Date(timeIntervalSince1970: 0))
+        await transport.simulateIncoming(.setLog(dto))
+        try await Task.sleep(nanoseconds: 50_000_000)
+        bridge.cancel()
+        let logs = try fetchSetLogs(ctx: ctx, sessionID: sessionID)
+        XCTAssertEqual(logs.count, 1)
+    }
+
+    @MainActor
+    func test_bridgeIncoming_recordsWatchSessionUUID() async throws {
+        let (store, _, _, _) = try await makeStoreWithStartedSession()
+        let transport = FakeTransport()
+        let bridge = Task { await store.bridgeIncoming(transport: transport) }
+        let watchUUID = UUID()
+        await transport.simulateIncoming(.sessionLifecycle(.started(watchSessionUUID: watchUUID)))
+        try await Task.sleep(nanoseconds: 50_000_000)
+        bridge.cancel()
+        XCTAssertEqual(store.watchSessionUUID, watchUUID)
+    }
+
+    @MainActor
     func test_flatten_unwrapsAllSetsAcrossBlocks() throws {
         let block = WorkoutBlock(id: "b1", label: "Main", exercises: [
             PlannedExercise(id: "e1", exerciseID: "back-squat", name: "Back Squat",
