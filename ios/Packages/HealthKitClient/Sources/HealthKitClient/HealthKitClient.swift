@@ -129,7 +129,7 @@ public extension HealthKitClient {
     ]
     #endif
 
-    func requestWriteAuthorization() async throws {
+    public func requestWriteAuthorization() async throws {
         #if canImport(HealthKit)
         guard let store else { return }
         try await store.requestAuthorization(toShare: Set(Self.writeTypes), read: nil)
@@ -138,7 +138,7 @@ public extension HealthKitClient {
 
     /// Returns true when *all* write categories are authorized.
     /// HealthKit auth status is per-type; we treat partial as not-ready.
-    func writeAuthorizationStatus() -> WriteAuthStatus {
+    public func writeAuthorizationStatus() -> WriteAuthStatus {
         #if canImport(HealthKit)
         guard let store = store as? HKHealthStore else { return .undetermined }
         let statuses = Self.writeTypes.map { store.authorizationStatus(for: $0) }
@@ -156,3 +156,12 @@ public enum WriteAuthStatus: Sendable, Equatable {
     case authorized
     case denied
 }
+
+/// Testability seam for write-auth flows: lets `SessionStore` (and future
+/// callers) make the JIT auth check without holding a real `HKHealthStore`.
+public protocol HealthKitAuthGate: Sendable {
+    func writeAuthorizationStatus() -> WriteAuthStatus
+    func requestWriteAuthorization() async throws
+}
+
+extension HealthKitClient: HealthKitAuthGate {}
