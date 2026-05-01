@@ -175,4 +175,17 @@ public final class WatchSessionStore {
             try? await transport.send(.setLog(log), via: .reliable)
         }
     }
+
+    /// Long-lived: subscribes to `transport.incoming` and drains the outbox
+    /// on `.ack`. Cancel via the wrapping Task on app teardown.
+    /// Per `WatchSessionTransport` semantics, attach at most one consumer per
+    /// transport — `LiveWatchSessionTransport` fans out separate streams,
+    /// `FakeTransport` shares one.
+    public func bridgeIncomingAcks() async {
+        for await msg in await transport.incoming {
+            if case .ack(let key) = msg {
+                try? outbox.drain(naturalKey: key)
+            }
+        }
+    }
 }

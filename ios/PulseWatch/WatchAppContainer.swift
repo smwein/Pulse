@@ -28,5 +28,15 @@ final class WatchAppContainer {
                 }
             }
         }
+
+        // Drain outbox on .ack from phone.
+        Task { [store] in
+            await store.bridgeIncomingAcks()
+        }
+
+        // Replay any logs that were queued before the watch app died.
+        Task { [store] in
+            await store.replayOutbox()
+        }
     }
 }

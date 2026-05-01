@@ -249,6 +249,23 @@ final class WatchSessionStoreTests: XCTestCase {
         }))
     }
 
+    func test_ackDrainsOutbox() async throws {
+        let transport = FakeTransport()
+        let dir = tempDir()
+        let outbox = SetLogOutbox(directory: dir)
+        let log = SetLogDTO(sessionID: UUID(), exerciseID: "e", setNum: 1,
+            reps: 5, load: "0", rpe: nil, loggedAt: Date())
+        try outbox.enqueue(log)
+        let store = WatchSessionStore(transport: transport, outbox: outbox,
+            sessionFactory: FakeWorkoutSessionFactory(),
+            payloadStorage: PayloadFileStorage(directory: dir))
+        let bridge = Task { await store.bridgeIncomingAcks() }
+        await transport.simulateIncoming(.ack(naturalKey: log.naturalKey))
+        try await Task.sleep(nanoseconds: 50_000_000)
+        bridge.cancel()
+        XCTAssertEqual(try outbox.pending().count, 0)
+    }
+
     func test_outboxReplays_onReachabilityGain() async throws {
         let transport = FakeTransport()
         await transport.setReachable(false)
