@@ -177,6 +177,11 @@ extension SessionStore {
     /// workout payload via `transferUserInfo` (reliable channel). When
     /// unreachable, falls through to the Plan 4 no-Watch path silently.
     public func startWithWatch(transport: any WatchSessionTransport) async {
+        // Reset stale Watch state so a previous session's terminal flags don't
+        // poison the new one.
+        watchSessionUUID = nil
+        watchSessionEnded = false
+        watchFailureReason = nil
         await self.start()
         guard await transport.isReachable else { return }
         guard let payload = currentPayload() else { return }

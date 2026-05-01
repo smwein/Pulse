@@ -147,6 +147,26 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    func test_startWithWatch_resetsStaleFlags() async throws {
+        let transport = FakeTransport()
+        let (store, _, _) = try await makeStoreWithFreshWorkout()
+        // Seed stale terminal flags via the bridge.
+        let bridge = Task { await store.bridgeIncoming(transport: transport) }
+        await transport.simulateIncoming(.sessionLifecycle(.ended))
+        await transport.simulateIncoming(.sessionLifecycle(.failed(reason: .healthKitDenied)))
+        try await Task.sleep(nanoseconds: 50_000_000)
+        bridge.cancel()
+        XCTAssertTrue(store.watchSessionEnded)
+        XCTAssertEqual(store.watchFailureReason, .healthKitDenied)
+        // A fresh startWithWatch must clear them.
+        await transport.setReachable(false)
+        await store.startWithWatch(transport: transport)
+        XCTAssertFalse(store.watchSessionEnded)
+        XCTAssertNil(store.watchFailureReason)
+        XCTAssertNil(store.watchSessionUUID)
+    }
+
+    @MainActor
     func test_flatten_unwrapsAllSetsAcrossBlocks() throws {
         let block = WorkoutBlock(id: "b1", label: "Main", exercises: [
             PlannedExercise(id: "e1", exerciseID: "back-squat", name: "Back Squat",
