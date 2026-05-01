@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import WatchBridge
 import Logging
+import HealthKitClient
 
 public enum WatchSessionState: Equatable, Sendable {
     case idle
@@ -31,6 +32,7 @@ public final class WatchSessionStore {
     private let outbox: SetLogOutbox
     private let factory: WorkoutSessionFactory
     private let payloadStorage: PayloadFileStorage
+    private let authGate: HealthKitAuthGate?
 
     private var loggedSetCounts: [String: Int] = [:]  // exerciseID → count
 
@@ -53,11 +55,13 @@ public final class WatchSessionStore {
                 sessionFactory: WorkoutSessionFactory,
                 payloadStorage: PayloadFileStorage = PayloadFileStorage(
                     directory: FileManager.default.urls(for: .applicationSupportDirectory,
-                                                        in: .userDomainMask)[0])) {
+                                                        in: .userDomainMask)[0]),
+                authGate: HealthKitAuthGate? = nil) {
         self.transport = transport
         self.outbox = outbox
         self.factory = sessionFactory
         self.payloadStorage = payloadStorage
+        self.authGate = authGate
     }
 
     public func receivePayload(_ payload: WorkoutPayloadDTO) async {
@@ -76,6 +80,26 @@ public final class WatchSessionStore {
         // call the factory twice — a second factory failure would wipe the
         // success of the first.
         guard state == .ready else { return }
+        // JIT HealthKit auth — skip the gate entirely if no gate was injected.
+        // Mirrors the phone-side TG11.1 pattern; reuses HealthKitAuthGate from
+        // HealthKitClient instead of introducing a parallel protocol.
+        if let authGate {
+            var status = authGate.writeAuthorizationStatus()
+            if status == .undetermined {
+                try? await authGate.requestWriteAuthorization()
+                status = authGate.writeAuthorizationStatus()
+            }
+            if status == .denied {
+                state = .failed(reason: .healthKitDenied)
+                // Terminal events route over .reliable for delivery guarantees,
+                // matching the sessionStartFailed path below.
+                try? await transport.send(
+                    .sessionLifecycle(.failed(reason: .healthKitDenied)),
+                    via: .reliable)
+                throw NSError(domain: "WatchSessionStore", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "HealthKit write access denied"])
+            }
+        }
         state = .starting
         do {
             let uuid = try await factory.startSession(activityKind: payload.activityKind)

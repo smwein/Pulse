@@ -1,5 +1,6 @@
 import XCTest
 import WatchBridge
+import HealthKitClient
 @testable import WatchWorkout
 
 @MainActor
@@ -205,10 +206,66 @@ final class WatchSessionStoreTests: XCTestCase {
         XCTAssertEqual(lastSent?.channel, .reliable)
     }
 
+    func test_start_requestsAuthIfUndetermined_andContinuesOnGrant() async throws {
+        let transport = FakeTransport()
+        let factory = FakeWorkoutSessionFactory()
+        let dir = tempDir()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k", exercises: [])
+        let gate = FakeHealthKitAuthGate(initial: .undetermined, afterRequest: .authorized)
+        let store = WatchSessionStore(transport: transport,
+            outbox: SetLogOutbox(directory: dir),
+            sessionFactory: factory,
+            payloadStorage: PayloadFileStorage(directory: dir),
+            authGate: gate)
+        await store.receivePayload(payload)
+        try await store.start()
+        XCTAssertEqual(gate.requestCount, 1)
+        XCTAssertEqual(store.state, .active)
+    }
+
+    func test_start_emitsHealthKitDenied_onDenial() async throws {
+        let transport = FakeTransport()
+        let factory = FakeWorkoutSessionFactory()
+        let dir = tempDir()
+        let payload = WorkoutPayloadDTO(sessionID: UUID(), workoutID: UUID(),
+            title: "T", activityKind: "k", exercises: [])
+        let gate = FakeHealthKitAuthGate(initial: .undetermined, afterRequest: .denied)
+        let store = WatchSessionStore(transport: transport,
+            outbox: SetLogOutbox(directory: dir),
+            sessionFactory: factory,
+            payloadStorage: PayloadFileStorage(directory: dir),
+            authGate: gate)
+        await store.receivePayload(payload)
+        do {
+            try await store.start()
+            XCTFail("expected throw")
+        } catch {}
+        XCTAssertEqual(store.state, .failed(reason: .healthKitDenied))
+        let sent = await transport.sent
+        XCTAssertTrue(sent.contains(where: {
+            $0.message == .sessionLifecycle(.failed(reason: .healthKitDenied))
+                && $0.channel == .reliable
+        }))
+    }
+
     private func tempDir() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("store-\(UUID())")
     }
+}
+
+private final class FakeHealthKitAuthGate: HealthKitAuthGate, @unchecked Sendable {
+    var initialStatus: WriteAuthStatus
+    var afterRequestStatus: WriteAuthStatus
+    var requestCount = 0
+    init(initial: WriteAuthStatus, afterRequest: WriteAuthStatus) {
+        self.initialStatus = initial; self.afterRequestStatus = afterRequest
+    }
+    func writeAuthorizationStatus() -> WriteAuthStatus {
+        requestCount > 0 ? afterRequestStatus : initialStatus
+    }
+    func requestWriteAuthorization() async throws { requestCount += 1 }
 }
 
 final class FakeWorkoutSessionFactory: WorkoutSessionFactory, @unchecked Sendable {
