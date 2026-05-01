@@ -8,6 +8,7 @@ let package = Package(
     dependencies: [
         .package(path: "../../CoreModels"),
         .package(path: "../../DesignSystem"),
+        .package(path: "../../HealthKitClient"),
         .package(path: "../../Logging"),
         .package(path: "../../Persistence"),
         .package(path: "../../Repositories"),
@@ -17,14 +18,16 @@ let package = Package(
     targets: [
         .target(
             name: "InWorkout",
-            dependencies: ["CoreModels", "DesignSystem", "Logging", "Persistence",
+            dependencies: ["CoreModels", "DesignSystem", "HealthKitClient",
+                           "Logging", "Persistence",
                            "Repositories",
                            .product(name: "WatchBridge", package: "WatchBridge"),
                            "WorkoutDetail"]
         ),
         .testTarget(
             name: "InWorkoutTests",
-            dependencies: ["InWorkout", "CoreModels", "Persistence", "Repositories",
+            dependencies: ["InWorkout", "CoreModels", "HealthKitClient",
+                           "Persistence", "Repositories",
                            .product(name: "WatchBridge", package: "WatchBridge")]
         ),
     ]

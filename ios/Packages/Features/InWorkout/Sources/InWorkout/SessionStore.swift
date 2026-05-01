@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import CoreModels
+import HealthKitClient
 import Logging
 import Persistence
 import Repositories
@@ -56,16 +57,19 @@ public final class SessionStore {
     public var onLifecycle: (Lifecycle) -> Void = { _ in }
 
     private let repo: SessionRepository?
+    private let authGate: HealthKitAuthGate?
 
     /// Test-only: skip persistence.
     public static func preview(flat: [FlatEntry]) -> SessionStore {
         SessionStore(workoutID: UUID(), flat: flat, repo: nil)
     }
 
-    public init(workoutID: UUID, flat: [FlatEntry], repo: SessionRepository?) {
+    public init(workoutID: UUID, flat: [FlatEntry], repo: SessionRepository?,
+                authGate: HealthKitAuthGate? = nil) {
         self.workoutID = workoutID
         self.flat = flat
         self.repo = repo
+        self.authGate = authGate
         let first = flat.first
         self.draft = Draft(reps: first?.prescribedReps ?? 0,
                            load: first?.prescribedLoad ?? "",
@@ -182,6 +186,11 @@ extension SessionStore {
         watchSessionUUID = nil
         watchSessionEnded = false
         watchFailureReason = nil
+        // JIT HealthKit write-auth: only request if the user hasn't seen the
+        // prompt yet. .denied stays denied; .authorized skips the prompt.
+        if let authGate, authGate.writeAuthorizationStatus() == .undetermined {
+            try? await authGate.requestWriteAuthorization()
+        }
         await self.start()
         guard await transport.isReachable else { return }
         guard let payload = currentPayload() else { return }

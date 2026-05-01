@@ -1,5 +1,6 @@
 import XCTest
 import CoreModels
+import HealthKitClient
 import Persistence
 import Repositories
 import SwiftData
@@ -147,6 +148,24 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    func test_startWithWatch_requestsWriteAuthIfUndetermined() async throws {
+        let transport = FakeTransport()
+        await transport.setReachable(true)
+        let (store, gate, _) = try await makeStoreWithFreshWorkoutAndGate(status: .undetermined)
+        await store.startWithWatch(transport: transport)
+        XCTAssertTrue(gate.didRequestWriteAuth)
+    }
+
+    @MainActor
+    func test_startWithWatch_skipsAuthIfAlreadyAuthorized() async throws {
+        let transport = FakeTransport()
+        await transport.setReachable(true)
+        let (store, gate, _) = try await makeStoreWithFreshWorkoutAndGate(status: .authorized)
+        await store.startWithWatch(transport: transport)
+        XCTAssertFalse(gate.didRequestWriteAuth)
+    }
+
+    @MainActor
     func test_startWithWatch_resetsStaleFlags() async throws {
         let transport = FakeTransport()
         let (store, _, _) = try await makeStoreWithFreshWorkout()
@@ -228,9 +247,34 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    private func makeStoreWithFreshWorkoutAndGate(status: WriteAuthStatus)
+        async throws -> (store: SessionStore, gate: FakeHealthKitAuthGate, workoutID: UUID)
+    {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let workout = WorkoutEntity(id: UUID(), planID: UUID(),
+            scheduledFor: Date(), title: "T", subtitle: "S",
+            workoutType: "Strength", durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8))
+        ctx.insert(workout); try ctx.save()
+        let repo = SessionRepository(modelContainer: container)
+        let gate = FakeHealthKitAuthGate()
+        gate.status = status
+        let store = SessionStore(workoutID: workout.id, flat: makeFlat(), repo: repo, authGate: gate)
+        return (store, gate, workout.id)
+    }
+
+    @MainActor
     private func fetchSetLogs(ctx: ModelContext, sessionID: UUID) throws -> [SetLogEntity] {
         let sid = sessionID
         return try ctx.fetch(FetchDescriptor<SetLogEntity>(
             predicate: #Predicate { $0.sessionID == sid }))
     }
+}
+
+private final class FakeHealthKitAuthGate: HealthKitAuthGate, @unchecked Sendable {
+    var status: WriteAuthStatus = .undetermined
+    var didRequestWriteAuth = false
+    func writeAuthorizationStatus() -> WriteAuthStatus { status }
+    func requestWriteAuthorization() async throws { didRequestWriteAuth = true }
 }
