@@ -1,7 +1,9 @@
 import XCTest
 import CoreModels
 import Persistence
+import Repositories
 import SwiftData
+import WatchBridge
 @testable import InWorkout
 
 final class SessionStoreTests: XCTestCase {
@@ -69,6 +71,30 @@ final class SessionStoreTests: XCTestCase {
     }
 
     @MainActor
+    func test_applyRemoteSetLog_writesViaRepo() async throws {
+        let (store, ctx, sessionID, _) = try await makeStoreWithStartedSession()
+        let dto = SetLogDTO(sessionID: sessionID, exerciseID: "row", setNum: 1,
+                            reps: 8, load: "135", rpe: nil,
+                            loggedAt: Date(timeIntervalSince1970: 0))
+        await store.applyRemoteSetLog(dto)
+        let logs = try fetchSetLogs(ctx: ctx, sessionID: sessionID)
+        XCTAssertEqual(logs.count, 1)
+        XCTAssertEqual(logs[0].setNum, 1)
+    }
+
+    @MainActor
+    func test_applyRemoteSetLog_isIdempotentByNaturalKey() async throws {
+        let (store, ctx, sessionID, _) = try await makeStoreWithStartedSession()
+        let dto = SetLogDTO(sessionID: sessionID, exerciseID: "row", setNum: 1,
+                            reps: 8, load: "135", rpe: nil,
+                            loggedAt: Date(timeIntervalSince1970: 0))
+        await store.applyRemoteSetLog(dto)
+        await store.applyRemoteSetLog(dto)
+        let logs = try fetchSetLogs(ctx: ctx, sessionID: sessionID)
+        XCTAssertEqual(logs.count, 1)
+    }
+
+    @MainActor
     func test_flatten_unwrapsAllSetsAcrossBlocks() throws {
         let block = WorkoutBlock(id: "b1", label: "Main", exercises: [
             PlannedExercise(id: "e1", exerciseID: "back-squat", name: "Back Squat",
@@ -90,5 +116,33 @@ final class SessionStoreTests: XCTestCase {
         XCTAssertEqual(flat[0].setNum, 1)
         XCTAssertEqual(flat[1].setNum, 2)
         XCTAssertEqual(flat[2].exerciseID, "row")
+    }
+
+    // MARK: - Test scaffolding helpers
+
+    @MainActor
+    private func makeStoreWithStartedSession() async throws
+        -> (store: SessionStore, ctx: ModelContext, sessionID: UUID, workoutID: UUID)
+    {
+        let container = try PulseModelContainer.inMemory()
+        let ctx = container.mainContext
+        let workout = WorkoutEntity(id: UUID(), planID: UUID(),
+            scheduledFor: Date(), title: "T", subtitle: "S",
+            workoutType: "Strength", durationMin: 30, status: "scheduled",
+            blocksJSON: Data("[]".utf8), exercisesJSON: Data("[]".utf8))
+        ctx.insert(workout)
+        try ctx.save()
+        let repo = SessionRepository(modelContainer: container)
+        let flat = makeFlat()
+        let store = SessionStore(workoutID: workout.id, flat: flat, repo: repo)
+        await store.start()
+        return (store, ctx, store.sessionID!, workout.id)
+    }
+
+    @MainActor
+    private func fetchSetLogs(ctx: ModelContext, sessionID: UUID) throws -> [SetLogEntity] {
+        let sid = sessionID
+        return try ctx.fetch(FetchDescriptor<SetLogEntity>(
+            predicate: #Predicate { $0.sessionID == sid }))
     }
 }

@@ -1,9 +1,11 @@
 import Foundation
 import Observation
 import CoreModels
+import Logging
 import Persistence
 import Repositories
 import SwiftData
+import WatchBridge
 
 @MainActor
 @Observable
@@ -137,6 +139,26 @@ public final class SessionStore {
                           load: first.prescribedLoad, rpe: 0)
         }
         onLifecycle(.discarded)
+    }
+}
+
+extension SessionStore {
+    /// Forwards a remote set log (originated from the Watch) to the repository.
+    /// Idempotency is provided by `SessionRepository.logSet`'s upsert key
+    /// (sessionID, exerciseID, setNum) — two identical applies result in one row.
+    public func applyRemoteSetLog(_ dto: SetLogDTO) async {
+        guard let repo else { return }
+        do {
+            try repo.logSet(sessionID: dto.sessionID,
+                            exerciseID: dto.exerciseID,
+                            setNum: dto.setNum,
+                            reps: dto.reps,
+                            load: dto.load,
+                            rpe: dto.rpe ?? 0,
+                            now: dto.loggedAt)
+        } catch {
+            PulseLogger.session.error("applyRemoteSetLog failed", error)
+        }
     }
 }
 
