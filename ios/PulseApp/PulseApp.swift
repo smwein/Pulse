@@ -36,10 +36,18 @@ struct PulseApp: App {
             workerURL: Secrets.workerURL,
             deviceToken: Secrets.deviceToken
         ))
-        // FakeMirroredObserver until TG10.4 wires the real LiveMirroredSessionObserver.
+        // `LiveMirroredSessionObserver` uses `HKLiveWorkoutBuilder`, which is iOS 26+
+        // (project deployment target is iOS 17). Pre-iOS-26 devices fall back to the
+        // protocol fake — HR card stays inert, but the rest of the app boots.
+        let mirroredObserver: any MirroredSessionObserver
+        if #available(iOS 26.0, *) {
+            mirroredObserver = LiveMirroredSessionObserver()
+        } else {
+            mirroredObserver = FakeMirroredObserver()
+        }
         return AppContainer(modelContainer: modelContainer, api: api, manifestURL: Secrets.manifestURL,
                             healthKit: HealthKitClient.live(),
                             transport: LiveWatchSessionTransport(),
-                            mirroredObserver: FakeMirroredObserver())
+                            mirroredObserver: mirroredObserver)
     }
 }
