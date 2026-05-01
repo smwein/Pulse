@@ -171,6 +171,12 @@ extension SessionStore {
             case .sessionLifecycle(.failed(let r)):
                 PulseLogger.session.error("watch lifecycle failed: \(r.rawValue)")
                 self.watchFailureReason = r
+                if r == .healthKitDenied {
+                    // Surface to Home banner — Home reads this key.
+                    UserDefaults.standard.set(true, forKey: SharedDefaultsKeys.watchHKDeniedBanner)
+                    // Reset the dismiss flag so the banner shows up again on a fresh denial.
+                    UserDefaults.standard.set(false, forKey: SharedDefaultsKeys.watchHKDeniedBannerDismissed)
+                }
             case .ack, .workoutPayload:
                 break
             }

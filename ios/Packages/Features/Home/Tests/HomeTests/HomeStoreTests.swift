@@ -36,4 +36,29 @@ final class HomeStoreTests: XCTestCase {
         XCTAssertEqual(store.todaysWorkout?.title, "Push")
         XCTAssertEqual(store.profile?.displayName, "Sam")
     }
+
+    func test_setWatchHKDenied_setsBannerVisible() {
+        let suite = "test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let container = try! PulseModelContainer.inMemory()
+        let store = HomeStore(workoutRepo: WorkoutRepository(modelContainer: container),
+                              profileRepo: ProfileRepository(modelContainer: container),
+                              defaults: defaults)
+        XCTAssertFalse(store.watchHKDeniedBannerVisible)
+        store.setWatchHKDenied()
+        XCTAssertTrue(store.watchHKDeniedBannerVisible)
+    }
+
+    func test_dismissWatchHKBanner_clears() {
+        let suite = "test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let container = try! PulseModelContainer.inMemory()
+        let store = HomeStore(workoutRepo: WorkoutRepository(modelContainer: container),
+                              profileRepo: ProfileRepository(modelContainer: container),
+                              defaults: defaults)
+        store.setWatchHKDenied()
+        XCTAssertTrue(store.watchHKDeniedBannerVisible)
+        store.dismissWatchHKBanner()
+        XCTAssertFalse(store.watchHKDeniedBannerVisible)
+    }
 }

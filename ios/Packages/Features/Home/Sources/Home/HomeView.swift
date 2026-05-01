@@ -22,6 +22,9 @@ public struct HomeView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PulseSpacing.lg) {
+                if store.watchHKDeniedBannerVisible {
+                    watchHKDeniedBanner
+                }
                 if let profile = store.profile {
                     Text(greetingText(for: profile))
                         .pulseFont(.h2)
@@ -68,5 +71,24 @@ public struct HomeView: View {
             filled.insert(calendar.dateComponents([.year, .month, .day], from: date))
         }
         return WeekStripView(filledDates: filled, calendar: calendar)
+    }
+
+    private var watchHKDeniedBanner: some View {
+        PulseCard {
+            HStack(alignment: .top, spacing: PulseSpacing.sm) {
+                VStack(alignment: .leading, spacing: PulseSpacing.xs) {
+                    Text("Watch declined HealthKit access")
+                        .pulseFont(.h3)
+                        .foregroundStyle(PulseColors.ink0.color)
+                    Text("Open the Watch app and grant write access to log workouts to Health.")
+                        .pulseFont(.small)
+                        .foregroundStyle(PulseColors.ink1.color)
+                }
+                Spacer()
+                IconButton(systemName: "xmark") {
+                    store.dismissWatchHKBanner()
+                }
+            }
+        }
     }
 }
