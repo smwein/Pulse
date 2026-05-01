@@ -5,6 +5,7 @@ import Networking
 import Persistence
 import Repositories
 import HealthKitClient
+import WatchBridge
 
 @main
 struct PulseApp: App {
@@ -36,6 +37,7 @@ struct PulseApp: App {
             deviceToken: Secrets.deviceToken
         ))
         return AppContainer(modelContainer: modelContainer, api: api, manifestURL: Secrets.manifestURL,
-                            healthKit: HealthKitClient.live())
+                            healthKit: HealthKitClient.live(),
+                            transport: LiveWatchSessionTransport())
     }
 }

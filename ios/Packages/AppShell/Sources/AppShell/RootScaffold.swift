@@ -186,6 +186,8 @@ extension RootScaffold {
             modelContainer: appContainer.modelContainer,
             flat: flat,
             assetRepo: assetRepo,
+            transport: appContainer.transport,
+            healthKit: appContainer.healthKit,
             onComplete: { sid in
                 inWorkoutFor = nil
                 completeForSessionID = sid

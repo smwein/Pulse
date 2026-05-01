@@ -22,6 +22,8 @@
   <true/>
   <key>NSHealthShareUsageDescription</key>
   <string>Pulse uses recent activity, heart-rate, and sleep summaries to personalize your workouts and adapt them after each session.</string>
+  <key>NSHealthUpdateUsageDescription</key>
+  <string>Pulse saves completed workouts to Health so the AI can adapt your plan over time.</string>
   <key>UIApplicationSceneManifest</key>
   <dict>
     <key>UIApplicationSupportsMultipleScenes</key>

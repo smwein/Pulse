@@ -4,9 +4,11 @@ import UIKit
 #endif
 import CoreModels
 import DesignSystem
+import HealthKitClient
 import Persistence
 import Repositories
 import SwiftData
+import WatchBridge
 import WorkoutDetail
 
 public struct InWorkoutView: View {
@@ -20,16 +22,21 @@ public struct InWorkoutView: View {
     private let onComplete: (UUID) -> Void
     private let onDiscard: () -> Void
     private let assetRepo: ExerciseAssetRepository?
+    private let transport: (any WatchSessionTransport)?
 
     public init(workoutID: UUID,
                 modelContainer: ModelContainer,
                 flat: [SessionStore.FlatEntry],
                 assetRepo: ExerciseAssetRepository? = nil,
+                transport: (any WatchSessionTransport)? = nil,
+                healthKit: (any HealthKitAuthGate)? = nil,
                 onComplete: @escaping (UUID) -> Void,
                 onDiscard: @escaping () -> Void) {
         let repo = SessionRepository(modelContainer: modelContainer)
-        _store = State(initialValue: SessionStore(workoutID: workoutID, flat: flat, repo: repo))
+        _store = State(initialValue: SessionStore(workoutID: workoutID, flat: flat,
+                                                  repo: repo, authGate: healthKit))
         self.assetRepo = assetRepo
+        self.transport = transport
         self.onComplete = onComplete
         self.onDiscard = onDiscard
     }
@@ -75,6 +82,11 @@ public struct InWorkoutView: View {
         }
         .preferredColorScheme(.dark)
         .task { await onAppear() }
+        .task {
+            if let transport {
+                await store.bridgeIncoming(transport: transport)
+            }
+        }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
             tick()
         }
@@ -133,7 +145,11 @@ public struct InWorkoutView: View {
 
     private func onAppear() async {
         sessionStartTime = Date()
-        await store.start()
+        if let transport {
+            await store.startWithWatch(transport: transport)
+        } else {
+            await store.start()
+        }
         store.onLifecycle = { [self] event in
             switch event {
             case .completed(let session):

@@ -11,12 +11,14 @@ let package = Package(
         .package(path: "../Networking"),
         .package(path: "../HealthKitClient"),
         .package(name: "Logging", path: "../Logging"),
+        .package(name: "WatchBridge", path: "../WatchBridge"),
     ],
     targets: [
         .target(
             name: "Repositories",
             dependencies: ["CoreModels", "Persistence", "Networking", "HealthKitClient",
-                           .product(name: "Logging", package: "Logging")]
+                           .product(name: "Logging", package: "Logging"),
+                           .product(name: "WatchBridge", package: "WatchBridge")]
         ),
         .testTarget(
             name: "RepositoriesTests",
